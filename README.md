@@ -11,6 +11,25 @@ ALL-E was developed by Université TÉLUQ (Canada) and Université Gaston Berger
 de Saint-Louis (Senegal), with the support of the Agence universitaire de la
 Francophonie (AUF).
 
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/08-chat-answer.png" alt="ALL-E answering a question from the course documents"></td>
+    <td width="50%"><img src="screenshots/09-chat-sources.png" alt="A [Source 1] citation in an answer"></td>
+  </tr>
+  <tr>
+    <td><b>Answers from the course.</b> A learner asks a question in the block; ALL-E answers from the documents the teacher uploaded.</td>
+    <td><b>Cited sources.</b> <code>[Source N]</code> points to the course passages the answer relies on.</td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/10-chat-empathy.png" alt="An empathetic answer to a confused learner"></td>
+    <td><img src="screenshots/11-chat-off-topic.png" alt="ALL-E declining a question outside the course"></td>
+  </tr>
+  <tr>
+    <td><b>Empathy.</b> When a learner sounds lost, ALL-E reassures first, then explains simply.</td>
+    <td><b>Stays on topic.</b> Questions outside the course are declined politely.</td>
+  </tr>
+</table>
+
 ## How it answers
 
 When a teacher uploads course documents, ALL-E extracts their text, splits it
@@ -55,20 +74,68 @@ The assistant remembers the last ten exchanges of each learner in each course.
 4. In a course, turn editing on and add the **ALL-E** block.
 5. As a teacher, upload the course documents from the block.
 
-## Settings
+## Configuration
 
-| Setting | Purpose |
-| --- | --- |
-| Answering mode | Standard or Agentic RAG. |
-| Relevance threshold | Agentic RAG: cosine distance under which a passage counts as relevant (default 0.55). It depends on the embedding model; lower it to rewrite questions more often. |
-| Provider | OpenRouter or Hugging Face, for both generation and embeddings. |
-| Models | Generation and embedding models of the provider. BAAI bge-m3 is the default embedding model; it is multilingual. |
-| Weaviate URL and key | Where course passages are stored. |
-| Collection prefix | Keeps the collections of several Moodle sites apart in a shared Weaviate cluster. |
-| Path to pdftotext, Adobe credentials | How PDF documents are read. |
+All settings are under **Site administration > Plugins > Blocks > ALL-E**.
 
-Changing the embedding model or the collection prefix means documents must be
-uploaded again in every course.
+### Answering and AI provider
+
+![Answering mode, relevance threshold, provider and API key](screenshots/01-settings-ai.png)
+
+1. **Answering mode**: Agentic RAG (default, recommended) or Standard RAG.
+2. **Relevance threshold** (Agentic RAG): cosine distance under which a passage
+   counts as relevant (default 0.55). With fewer than two relevant passages the
+   question is rewritten. The right value depends on the embedding model; lower
+   it to rewrite questions more often.
+3. **Provider**: OpenRouter or Hugging Face. The same provider generates the
+   answers and embeds the documents, so documents and questions share one
+   vector space.
+4. **API key** of the provider.
+
+![Generation and embedding models](screenshots/02-settings-models.png)
+
+5. **Generation model**, for instance `openai/gpt-4o-mini` or `openai/gpt-4o`.
+6. **Embedding model**. BAAI bge-m3 (default) is multilingual. Changing it means
+   uploading the documents again in every course.
+
+With Hugging Face, you can also point the generation and embedding endpoints
+to your own server, so that course content stays inside your network.
+
+### Vector database and PDF reading
+
+![Weaviate and pdftotext settings](screenshots/03-settings-weaviate-pdf.png)
+
+7. **Weaviate URL**, self-hosted or Weaviate Cloud.
+8. **Weaviate API key**, empty when the server has no authentication.
+9. **Collection prefix** (default `Alle`). Each course gets its own collection,
+   such as `Alle_course_42`; give each Moodle site its own prefix when several
+   sites share one Weaviate cluster. Changing it means uploading the documents
+   again.
+10. **Path to pdftotext**, used to read PDFs. Adobe PDF Services credentials,
+    further down the page, are optional and only used for PDFs that pdftotext
+    cannot read, such as scans.
+
+### Check the services
+
+![Result of Check the services](screenshots/04-check-services.png)
+
+Once the settings are saved, **Check the services** calls each configured
+service once and reports what answered. Calls to AI providers may be charged.
+
+### In the course
+
+<table>
+  <tr>
+    <td width="33%"><img src="screenshots/05-teacher-block.png" alt="The block as seen by a teacher"></td>
+    <td width="33%"><img src="screenshots/06-teacher-upload.png" alt="Uploading the course documents"></td>
+    <td width="33%"><img src="screenshots/07-teacher-prompt.png" alt="Editing the prompt"></td>
+  </tr>
+  <tr>
+    <td>Teachers see two extra buttons in the block.</td>
+    <td><b>Upload the course documents</b>: PDF, TXT or Markdown, 10 MB each at most. New files replace the documents already indexed for the course.</td>
+    <td><b>Edit the prompt</b> that frames every answer, with the placeholders <code>[[ coursename ]]</code>, <code>[[ question ]]</code> and <code>[[ history ]]</code>. An empty prompt restores the default one.</td>
+  </tr>
+</table>
 
 ## Capabilities
 

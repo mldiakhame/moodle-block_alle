@@ -37,7 +37,6 @@ $PAGE->set_heading(get_string('testsettings', 'block_alle'));
 $run = optional_param('run', 0, PARAM_BOOL);
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string('testsettings', 'block_alle'));
 
 if (!$run) {
     // The checks call paid APIs, so they only run on explicit request.
