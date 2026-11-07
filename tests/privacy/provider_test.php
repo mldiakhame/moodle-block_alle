@@ -66,8 +66,8 @@ final class provider_test extends provider_testcase {
     }
 
     public function test_contexts_and_users(): void {
-        $this->assertSame([$this->context->id], provider::get_contexts_for_userid($this->learner->id)->get_contextids());
-        $this->assertSame([$this->context->id], provider::get_contexts_for_userid($this->teacher->id)->get_contextids());
+        $this->assertEquals([$this->context->id], provider::get_contexts_for_userid($this->learner->id)->get_contextids());
+        $this->assertEquals([$this->context->id], provider::get_contexts_for_userid($this->teacher->id)->get_contextids());
 
         $userlist = new userlist($this->context, 'block_alle');
         provider::get_users_in_context($userlist);

@@ -102,8 +102,20 @@ jobs:
         run: moodle-plugin-ci mustache
 
       - name: Grunt
+        id: grunt
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci grunt --max-lint-warnings 0
+
+      - name: Upload rebuilt JavaScript
+        if: ${{ failure() && steps.grunt.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: amd-build (${{ matrix.moodle-branch }}, ${{ matrix.database }})
+          path: |
+            ${{ github.workspace }}/moodle/blocks/alle/amd/build
+            ${{ github.workspace }}/moodle/public/blocks/alle/amd/build
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}

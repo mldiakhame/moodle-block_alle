@@ -256,21 +256,28 @@ define(['core/ajax', 'core/str'], function(Ajax, Str) {
                 status.hidden = false;
                 status.classList.add('show');
 
-                Promise.all(files.map((file) => toBase64(file).then((content) => ({filename: file.name, content: content}))))
+                const readFile = (file) => toBase64(file).then((content) => ({filename: file.name, content: content}));
+                Promise.all(files.map(readFile))
                     .then((payload) => Ajax.call([{
                         methodname: 'block_alle_upload_files',
                         args: {courseid: courseId, files: payload},
                     }])[0])
                     .then((response) => {
-                        const problems = response.errors.map((error) => (error.filename ? error.filename + ': ' : '') + error.message);
+                        const problems = response.errors.map((error) =>
+                            (error.filename ? error.filename + ': ' : '') + error.message);
                         if (problems.length) {
                             showError(problems.join(' | '));
                         }
                         if (!response.success) {
                             return null;
                         }
-                        return Str.getString('indexed', 'block_alle', {files: response.indexed, passages: response.passages})
-                            .then((message) => addMessage('bot-msg', escapeHtml(message)));
+                        return Str.getString('indexed', 'block_alle', {files: response.indexed, passages: response.passages});
+                    })
+                    .then((message) => {
+                        if (message) {
+                            addMessage('bot-msg', escapeHtml(message));
+                        }
+                        return null;
                     })
                     .catch((error) => showError(error.message))
                     .finally(() => {
