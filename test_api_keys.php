@@ -1,6 +1,9 @@
 <?php
 /**
+ * API key testing page for TÉLUQ Chatbot plugin.
+ *
  * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 require_once('../../config.php');
@@ -15,164 +18,157 @@ $PAGE->set_url('/blocks/uteluqchatbot/test_api_keys.php');
 $PAGE->set_title(get_string('test_api_keys', 'block_uteluqchatbot'));
 $PAGE->set_heading(get_string('test_api_keys', 'block_uteluqchatbot'));
 
-function get_access_token_adobe_pdf_services($client_id, $client_secret)
-{
-    // Initialize Moodle's curl class
+// ============================================================================
+// Test functions
+// ============================================================================
+
+function test_adobe_pdf($client_id, $client_secret): array {
+    if (empty($client_id) || empty($client_secret)) {
+        return ['success' => false, 'message' => get_string('adobe_pdf_credentials_not_configured', 'block_uteluqchatbot')];
+    }
+
     $curl = new curl();
-
-    // Prepare data
     $post_data = 'client_id=' . urlencode($client_id) . '&client_secret=' . urlencode($client_secret);
-
-    // cURL options using Moodle's curl class
     $options = [
         'returntransfer' => true,
-        'post' => true,
-        'postfields' => $post_data,
-        'httpheader' => ['Content-Type: application/x-www-form-urlencoded'],
-        'ssl_verifypeer' => false, // Disable SSL (use with caution)
+        'post'           => true,
+        'postfields'     => $post_data,
+        'httpheader'     => ['Content-Type: application/x-www-form-urlencoded'],
+        'ssl_verifypeer' => false,
     ];
 
-    // Execute the request
-    $response = $curl->post('https://pdf-services.adobe.io/token', $post_data, $options);
+    $response    = $curl->post('https://pdf-services.adobe.io/token', $post_data, $options);
     $http_status = $curl->get_info()['http_code'];
 
-    if ($curl->get_errno()) {
-        return [
-            'success' => false,
-            'message' => get_string('adobe_invalid_credentials', 'block_uteluqchatbot')
-        ];
+    if ($curl->get_errno() || $http_status != 200) {
+        return ['success' => false, 'message' => get_string('adobe_invalid_credentials', 'block_uteluqchatbot')];
     }
 
-    if ($http_status != 200) {
-        return [
-            'success' => false,
-            'message' => get_string('adobe_invalid_credentials', 'block_uteluqchatbot')
-        ];
+    $data = json_decode($response, true);
+    if (isset($data['access_token'])) {
+        return ['success' => true, 'message' => get_string('adobe_valid_credentials', 'block_uteluqchatbot')];
     }
 
-    $response_data = json_decode($response, true);
-    if (isset($response_data['access_token'])) {
-        return [
-            'success' => true,
-            'message' => get_string('adobe_valid_credentials', 'block_uteluqchatbot')
-        ];
-    } else {
-        return [
-            'success' => false,
-            'message' => get_string('adobe_invalid_credentials', 'block_uteluqchatbot')
-        ];
-    }
+    return ['success' => false, 'message' => get_string('adobe_invalid_credentials', 'block_uteluqchatbot')];
 }
 
-/**
- * Retrieves the list of available collections (classes) in Weaviate
- *
- * @param string $api_url The base URL of the Weaviate instance
- * @param string $api_key The API key for authentication
- * @return array Array containing the status of the operation, a message, and the collections data
- */
-function get_collections_weaviate($api_url, $api_key): array
-{
-    // Construct the URL to retrieve the schema
-    $endpoint = $api_url . '/v1/schema';
+function test_weaviate($api_url, $api_key): array {
+    if (empty($api_url)) {
+        return ['success' => false, 'message' => get_string('weaviate_invalid_key_or_url', 'block_uteluqchatbot') . '—'];
+    }
 
-    // Initialize Moodle's curl class
-    $curl = new curl();
+    if (strpos($api_url, 'https://') !== 0) {
+        $api_url = 'https://' . $api_url;
+    }
 
-    // Configure cURL options using Moodle's curl class
-    $options = [
-        'returntransfer' => true,
-        'ssl_verifypeer' => false,
-        'httpheader' => [
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => $api_url . '/v1/schema',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER     => [
             'Content-Type: application/json',
-            'Authorization: Bearer ' . $api_key
-        ]
-    ];
+            'Authorization: Bearer ' . $api_key,
+        ],
+        CURLOPT_TIMEOUT        => 10,
+    ]);
+    $response  = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_err  = curl_error($ch);
+    curl_close($ch);
 
-    // Execute the request and retrieve the response
-    $response = $curl->get($endpoint, [], $options);
-    $http_code = $curl->get_info()['http_code'];
-
-    // Handle CURL errors
-    if ($curl->get_errno()) {
-        $error_message = $curl->error;
-        return [
-            'success' => false,
-            'message' => get_string('weaviate_connection_error', 'block_uteluqchatbot') . $error_message,
-            'data' => []
-        ];
+    if ($curl_err) {
+        return ['success' => false, 'message' => get_string('weaviate_connection_error', 'block_uteluqchatbot') . $curl_err];
     }
-
-    // Check HTTP response code
     if ($http_code !== 200) {
-        return [
-            'success' => false,
-            'message' => get_string('weaviate_invalid_key_or_url', 'block_uteluqchatbot') . $http_code,
-            'data' => []
-        ];
+        return ['success' => false, 'message' => get_string('weaviate_invalid_key_or_url', 'block_uteluqchatbot') . $http_code];
     }
 
-    // Decode the JSON response
     $schema = json_decode($response, true);
-
-    // Check if JSON decoding was successful
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        return [
-            'success' => false,
-            'message' => get_string('weaviate_invalid_key_or_url', 'block_uteluqchatbot'),
-            'data' => []
-        ];
-    }
-
-    // Extract collection names
-    $collections = [];
-    if (isset($schema['classes']) && is_array($schema['classes'])) {
-        foreach ($schema['classes'] as $class) {
-            if (isset($class['class'])) {
-                $collections[] = [
-                    'name' => $class['class'],
-                    'description' => $class['description'] ?? '',
-                    'properties' => $class['properties'] ?? [],
-                    'vectorizer' => $class['vectorizer'] ?? 'none'
-                ];
-            }
-        }
-
-        return [
-            'success' => true,
-            'message' => get_string('weaviate_valid_key_and_url', 'block_uteluqchatbot'),
-            'data' => $collections
-        ];
-    }
-
+    $count  = isset($schema['classes']) ? count($schema['classes']) : 0;
     return [
-        'success' => false,
-        'message' => get_string('weaviate_invalid_key_or_url', 'block_uteluqchatbot'),
-        'data' => []
+        'success' => true,
+        'message' => get_string('weaviate_valid_key_and_url', 'block_uteluqchatbot') . " ($count collection(s) found)",
     ];
 }
 
-// Retrieve keys
-$weaviate_api_url = get_config('block_uteluqchatbot', 'weaviate_api_url');
-$weaviate_api_key = get_config('block_uteluqchatbot', 'weaviate_api_key');
-$adobe_pdf_client_id = get_config('block_uteluqchatbot', 'adobe_pdf_client_id');
-$adobe_pdf_client_secret = get_config('block_uteluqchatbot', 'adobe_pdf_client_secret');
-$cohere_embedding_api_key = get_config('block_uteluqchatbot', 'cohere_embedding_api_key');
+function test_embedder(string $provider_id): array {
+    if ($provider_id === 'huggingface') {
+        $key   = get_config('block_uteluqchatbot', 'huggingface_api_key');
+        $model = get_config('block_uteluqchatbot', 'huggingface_embedding_model') ?: 'BAAI/bge-m3';
+        if (empty($key)) {
+            return ['success' => false, 'message' => get_string('embedding_not_configured', 'block_uteluqchatbot')];
+        }
+        $embedder = new \block_uteluqchatbot\providers\huggingface_embedder($key, $model);
+    } else {
+        $key   = get_config('block_uteluqchatbot', 'openrouter_api_key');
+        $model = get_config('block_uteluqchatbot', 'openrouter_embedding_model') ?: 'openai/text-embedding-3-small';
+        if (empty($key)) {
+            return ['success' => false, 'message' => get_string('embedding_not_configured', 'block_uteluqchatbot')];
+        }
+        $embedder = new \block_uteluqchatbot\providers\openrouter_embedder($key, $model);
+    }
+    return $embedder->test_connection();
+}
 
-// Test keys
+function test_llm_provider(string $provider_id): array {
+    if ($provider_id === 'huggingface') {
+        $key   = get_config('block_uteluqchatbot', 'huggingface_api_key');
+        $model = get_config('block_uteluqchatbot', 'huggingface_model') ?: 'mistralai/Mistral-7B-Instruct-v0.3';
+        if (empty($key)) {
+            return ['success' => false, 'message' => get_string('llm_provider_not_configured', 'block_uteluqchatbot')];
+        }
+        $provider = new \block_uteluqchatbot\providers\huggingface_provider($key, $model);
+        $label    = "HuggingFace ($model)";
+    } else {
+        $key   = get_config('block_uteluqchatbot', 'openrouter_api_key');
+        $model = get_config('block_uteluqchatbot', 'openrouter_model') ?: 'openai/gpt-4o-mini';
+        if (empty($key)) {
+            return ['success' => false, 'message' => get_string('llm_provider_not_configured', 'block_uteluqchatbot')];
+        }
+        $provider = new \block_uteluqchatbot\providers\openrouter_provider($key, $model);
+        $label    = "OpenRouter ($model)";
+    }
+
+    $response = $provider->generate('Reply with exactly one word: OK');
+    if ($response === null) {
+        return ['success' => false, 'message' => "$label — " . $provider->get_last_error()];
+    }
+
+    return ['success' => true, 'message' => "$label — response received: " . mb_substr(trim($response), 0, 80)];
+}
+
+// ============================================================================
+// Run tests
+// ============================================================================
+
+$provider_id = get_config('block_uteluqchatbot', 'llm_provider') ?: 'openrouter';
+
 $results = [
-    'weaviate' => get_collections_weaviate($weaviate_api_url, $weaviate_api_key),
-    'adobe pdf services' => get_access_token_adobe_pdf_services($adobe_pdf_client_id, $adobe_pdf_client_secret)
+    'Weaviate'                                      => test_weaviate(
+        get_config('block_uteluqchatbot', 'weaviate_api_url'),
+        get_config('block_uteluqchatbot', 'weaviate_api_key')
+    ),
+    'Embeddings — ' . ucfirst($provider_id)        => test_embedder($provider_id),
+    'LLM generation — ' . ucfirst($provider_id)    => test_llm_provider($provider_id),
+    'Adobe PDF Services'                            => test_adobe_pdf(
+        get_config('block_uteluqchatbot', 'adobe_pdf_client_id'),
+        get_config('block_uteluqchatbot', 'adobe_pdf_client_secret')
+    ),
 ];
 
-// Display results
+// ============================================================================
+// Output
+// ============================================================================
+
 echo $OUTPUT->header();
+echo $OUTPUT->heading(get_string('test_api_keys', 'block_uteluqchatbot'));
 
 foreach ($results as $service => $result) {
-    $message_class = $result['success'] ? 'alert alert-success' : 'alert alert-danger';
+    $css = $result['success'] ? 'alert alert-success' : 'alert alert-danger';
     echo html_writer::div(
-        html_writer::tag('strong', ucfirst($service) . ': ') . $result['message'],
-        $message_class
+        html_writer::tag('strong', $service . ': ') . htmlspecialchars($result['message']),
+        $css
     );
 }
 

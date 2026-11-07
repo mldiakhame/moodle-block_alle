@@ -73,15 +73,24 @@ class provider implements
             'privacy:metadata:block_uteluqchatbot_prompts'
         );
 
-        // External service Cohere API
+        // External LLM API (OpenRouter or HuggingFace, depending on admin config)
         $items->add_external_location_link(
-            'cohere_api',
+            'llm_api',
             [
-                'question' => 'privacy:metadata:cohere_api:question',
-                'courseid' => 'privacy:metadata:cohere_api:courseid',
-                'prompt' => 'privacy:metadata:cohere_api:prompt',
+                'question' => 'privacy:metadata:llm_api:question',
+                'courseid' => 'privacy:metadata:llm_api:courseid',
+                'prompt'   => 'privacy:metadata:llm_api:prompt',
             ],
-            'privacy:metadata:cohere_api'
+            'privacy:metadata:llm_api'
+        );
+
+        // HuggingFace Inference API (BGE-M3 embeddings)
+        $items->add_external_location_link(
+            'huggingface_api',
+            [
+                'question' => 'privacy:metadata:huggingface_api:question',
+            ],
+            'privacy:metadata:huggingface_api'
         );
 
         // External service Weaviate Cloud (vector database)

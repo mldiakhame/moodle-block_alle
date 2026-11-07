@@ -1,0 +1,7 @@
+# Material that is not part of the plugin (articles, evaluation, credentials).
+ignore/
+
+# Local tooling.
+node_modules/
+.claude/
+.DS_Store

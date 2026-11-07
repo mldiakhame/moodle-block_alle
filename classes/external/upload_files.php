@@ -37,6 +37,52 @@ class upload_files extends external_api {
     }
 
     /**
+     * Extract text from a PDF file.
+     * Tries pdftotext first (free, no quota). Falls back to Adobe PDF Services if available.
+     * @param string $filepath Absolute path to the PDF on disk.
+     * @param string $filename Original filename (for error messages).
+     * @return string Extracted plain text.
+     * @throws Exception on failure.
+     */
+    private static function extract_pdf_text($filepath, $filename) {
+        // 1. Try pdftotext (poppler-utils — available on most Linux servers).
+        $pdftotext = trim(shell_exec('which pdftotext 2>/dev/null'));
+        if (!empty($pdftotext) && is_executable($pdftotext)) {
+            $dest_txt = $filepath . '.txt';
+            $cmd      = escapeshellcmd($pdftotext) . ' -enc UTF-8 '
+                      . escapeshellarg($filepath) . ' '
+                      . escapeshellarg($dest_txt)
+                      . ' 2>&1';
+            $out = shell_exec($cmd);
+            if (file_exists($dest_txt)) {
+                $text = file_get_contents($dest_txt);
+                unlink($dest_txt);
+                if (!empty(trim($text))) {
+                    return $text;
+                }
+            }
+            // pdftotext produced no text (scanned PDF?) — fall through to Adobe.
+        }
+
+        // 2. Fall back to Adobe PDF Services.
+        $adobe_id     = get_config('block_uteluqchatbot', 'adobe_pdf_client_id');
+        $adobe_secret = get_config('block_uteluqchatbot', 'adobe_pdf_client_secret');
+
+        if (empty($adobe_id) || empty($adobe_secret)) {
+            throw new Exception(
+                'Cannot extract text from "' . $filename . '": pdftotext is not available and Adobe PDF credentials are not configured.'
+            );
+        }
+
+        if (!class_exists('\block_uteluqchatbot\pdf_extract_api')) {
+            throw new Exception(get_string('pdf_extractor_not_found', 'block_uteluqchatbot'));
+        }
+
+        $extractor = new \block_uteluqchatbot\pdf_extract_api($adobe_id, $adobe_secret);
+        return $extractor->process_pdf($filepath);
+    }
+
+    /**
      * Get file extension
      * @param string $filename
      * @return string
@@ -73,12 +119,6 @@ class upload_files extends external_api {
     public static function execute($courseid, $files) {
         global $CFG, $USER, $DB;
 
-        // Clean any output that might pollute the JSON response
-        if (ob_get_level()) {
-            ob_end_clean();
-        }
-        ob_start();
-
         try {
             // Validate parameters
             $params = self::validate_parameters(self::execute_parameters(), [
@@ -104,35 +144,26 @@ class upload_files extends external_api {
                 }
             }
 
-            // Configuration of API keys and Weaviate URL
-            $apiUrl = get_config('block_uteluqchatbot', 'weaviate_api_url');
-            $apiKey = get_config('block_uteluqchatbot', 'weaviate_api_key');
-            $cohereApiKey = get_config('block_uteluqchatbot', 'cohere_embedding_api_key');
-
-            // Validate required configurations
-            if (empty($apiUrl) || empty($apiKey) || empty($cohereApiKey)) {
-                throw new Exception(get_string('missing_api_configuration', 'block_uteluqchatbot'));
+            // Build connector via shared factory (validates config internally).
+            try {
+                $connector = \block_uteluqchatbot\external\send_question::build_connector();
+            } catch (\moodle_exception $e) {
+                throw new Exception($e->getMessage());
             }
 
-            // Check if classes exist
-            if (!class_exists('\block_uteluqchatbot\weaviate_connector')) {
-                throw new Exception(get_string('weaviate_connector_not_found', 'block_uteluqchatbot'));
+            $courseName = 'Collection_course_' . $params['courseid'];
+
+            // Reset the Weaviate collection ONCE before processing any file.
+            // index_text_file() is called with $recreate=false for every file so
+            // that subsequent files append to the same collection instead of
+            // destroying what the previous file just indexed.
+            if ($connector->collection_exists($courseName)) {
+                if (!$connector->delete_collection($courseName)) {
+                    throw new Exception('Failed to reset collection: ' . $connector->get_last_error());
+                }
             }
-
-            // Initialize WeaviateConnector object
-            $connector = new \block_uteluqchatbot\weaviate_connector($apiUrl, $apiKey, $cohereApiKey);
-
-            $courseName = 'Course_collection_' . $params['courseid'];
-            
-            // Delete existing collection and recreate it
-            $connector->delete_collection($courseName);
-            
-            $checkIfCreated = $connector->collection_exists($courseName);
-
-            // Create the collection
             if (!$connector->create_collection($courseName)) {
-                $error = $connector->get_last_error();
-                throw new Exception(get_string('error_creating_collection', 'block_uteluqchatbot') . ($error ? $error : get_string('unknown_error', 'block_uteluqchatbot')));
+                throw new Exception('Failed to create collection: ' . $connector->get_last_error());
             }
 
             // Create or get a temporary directory for the plugin
@@ -181,21 +212,7 @@ class upload_files extends external_api {
 
                     // Process based on file type
                     if (self::is_pdf($file['filename'])) {
-                        // PDF processing
-                        $adobe_pdf_client_id = get_config('block_uteluqchatbot', 'adobe_pdf_client_id');
-                        $adobe_pdf_client_secret = get_config('block_uteluqchatbot', 'adobe_pdf_client_secret');
-
-                        if (empty($adobe_pdf_client_id) || empty($adobe_pdf_client_secret)) {
-                            throw new Exception(get_string('adobe_pdf_credentials_not_configured', 'block_uteluqchatbot'));
-                        }
-
-                        // Check if PDF extractor class exists
-                        if (!class_exists('\block_uteluqchatbot\pdf_extract_api')) {
-                            throw new Exception(get_string('pdf_extractor_not_found', 'block_uteluqchatbot'));
-                        }
-
-                        $pdfExtractor = new \block_uteluqchatbot\pdf_extract_api($adobe_pdf_client_id, $adobe_pdf_client_secret);
-                        $extractedText = $pdfExtractor->process_pdf($destination);
+                        $extractedText = self::extract_pdf_text($destination, $file['filename']);
 
                         if (empty($extractedText)) {
                             throw new Exception(get_string('failed_extract_pdf_text', 'block_uteluqchatbot') . $file['filename']);
@@ -215,8 +232,8 @@ class upload_files extends external_api {
                         $extractedText = $fileContent;
                     }
 
-                    // Index the text file
-                    $indexed = $connector->index_text_file($destinationTxt, $courseName, $courseName);
+                    // Append chunks to the collection (already created above).
+                    $indexed = $connector->index_text_file($destinationTxt, $courseName, $courseName, false);
 
                     if (!$indexed) {
                         $error = $connector->get_last_error();
@@ -272,11 +289,6 @@ class upload_files extends external_api {
                 'message' => $e->getMessage(),
                 'processedfiles' => 0
             ];
-        } finally {
-            // Clean output buffer before returning JSON
-            if (ob_get_level()) {
-                ob_end_clean();
-            }
         }
     }
 
