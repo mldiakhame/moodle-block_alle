@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,326 +12,186 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- * Privacy Subsystem implementation for block_uteluqchatbot.
- *
- * @package    block_uteluqchatbot
- * @copyright  2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
-namespace block_uteluqchatbot\privacy;
+namespace block_alle\privacy;
 
 use core_privacy\local\metadata\collection;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
-use core_privacy\local\request\deletion_criteria;
-use core_privacy\local\request\helper;
+use core_privacy\local\request\transform;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
- * Implementation of the privacy subsystem plugin provider for the chatbot block.
+ * Privacy provider for ALL-E.
+ *
+ * Learners' recent questions and answers are stored per course. Questions,
+ * course passages and teacher prompts are sent to the AI services configured
+ * by the administrator. Teacher prompts belong to the course: when a teacher's
+ * data is deleted, the prompt is kept but no longer linked to them.
+ *
+ * @package    block_alle
+ * @copyright  2025 Université TÉLUQ and Université Gaston Berger de Saint-Louis
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements
-        \core_privacy\local\metadata\provider,
-        \core_privacy\local\request\plugin\provider,
-        \core_privacy\local\request\core_userlist_provider {
+    \core_privacy\local\metadata\provider,
+    \core_privacy\local\request\core_userlist_provider,
+    \core_privacy\local\request\plugin\provider {
+    #[\Override]
+    public static function get_metadata(collection $collection): collection {
+        $collection->add_database_table('block_alle_conversations', [
+            'courseid' => 'privacy:metadata:conversations:courseid',
+            'userid' => 'privacy:metadata:conversations:userid',
+            'question' => 'privacy:metadata:conversations:question',
+            'answer' => 'privacy:metadata:conversations:answer',
+            'timecreated' => 'privacy:metadata:conversations:timecreated',
+        ], 'privacy:metadata:conversations');
 
-    /**
-     * Return the fields which contain personal data.
-     *
-     * @param collection $items a reference to the collection to use to store the metadata.
-     * @return collection the updated collection of metadata items.
-     */
-    public static function get_metadata(collection $items): collection {
-        $items->add_database_table(
-            'block_uteluqchatbot_conversations',
-            [
-                'userid' => 'privacy:metadata:block_uteluqchatbot_conversations:userid',
-                'question' => 'privacy:metadata:block_uteluqchatbot_conversations:question',
-                'answer' => 'privacy:metadata:block_uteluqchatbot_conversations:answer',
-                'timecreated' => 'privacy:metadata:block_uteluqchatbot_conversations:timecreated',
-                'courseid' => 'privacy:metadata:block_uteluqchatbot_conversations:courseid',
-            ],
-            'privacy:metadata:block_uteluqchatbot_conversations'
-        );
+        $collection->add_database_table('block_alle_prompts', [
+            'courseid' => 'privacy:metadata:prompts:courseid',
+            'prompt' => 'privacy:metadata:prompts:prompt',
+            'usermodified' => 'privacy:metadata:prompts:usermodified',
+            'timemodified' => 'privacy:metadata:prompts:timemodified',
+        ], 'privacy:metadata:prompts');
 
-        $items->add_database_table(
-            'block_uteluqchatbot_prompts',
-            [
-                'prompt' => 'privacy:metadata:block_uteluqchatbot_prompts:prompt',
-                'userid' => 'privacy:metadata:block_uteluqchatbot_prompts:userid',
-                'courseid' => 'privacy:metadata:block_uteluqchatbot_prompts:courseid',
-                'timecreated' => 'privacy:metadata:block_uteluqchatbot_prompts:timecreated',
-            ],
-            'privacy:metadata:block_uteluqchatbot_prompts'
-        );
+        $collection->add_external_location_link('languagemodel', [
+            'question' => 'privacy:metadata:languagemodel:question',
+            'history' => 'privacy:metadata:languagemodel:history',
+            'prompt' => 'privacy:metadata:languagemodel:prompt',
+        ], 'privacy:metadata:languagemodel');
 
-        // External LLM API (OpenRouter or HuggingFace, depending on admin config)
-        $items->add_external_location_link(
-            'llm_api',
-            [
-                'question' => 'privacy:metadata:llm_api:question',
-                'courseid' => 'privacy:metadata:llm_api:courseid',
-                'prompt'   => 'privacy:metadata:llm_api:prompt',
-            ],
-            'privacy:metadata:llm_api'
-        );
+        $collection->add_external_location_link('embeddings', [
+            'question' => 'privacy:metadata:embeddings:question',
+        ], 'privacy:metadata:embeddings');
 
-        // HuggingFace Inference API (BGE-M3 embeddings)
-        $items->add_external_location_link(
-            'huggingface_api',
-            [
-                'question' => 'privacy:metadata:huggingface_api:question',
-            ],
-            'privacy:metadata:huggingface_api'
-        );
+        $collection->add_external_location_link('vectorstore', [
+            'courseid' => 'privacy:metadata:vectorstore:courseid',
+        ], 'privacy:metadata:vectorstore');
 
-        // External service Weaviate Cloud (vector database)
-        $items->add_external_location_link(
-            'weaviate_cloud',
-            [
-                'document_content' => 'privacy:metadata:weaviate_cloud:document_content',
-                'embeddings' => 'privacy:metadata:weaviate_cloud:embeddings',
-                'courseid' => 'privacy:metadata:weaviate_cloud:courseid',
-                'metadata' => 'privacy:metadata:weaviate_cloud:metadata',
-            ],
-            'privacy:metadata:weaviate_cloud'
-        );
+        $collection->add_external_location_link('adobepdf', [
+            'file' => 'privacy:metadata:adobepdf:file',
+        ], 'privacy:metadata:adobepdf');
 
-        // External service Adobe PDF Services API
-        $items->add_external_location_link(
-            'adobe_pdf_api',
-            [
-                'pdf_content' => 'privacy:metadata:adobe_pdf_api:pdf_content',
-                'filename' => 'privacy:metadata:adobe_pdf_api:filename',
-                'extracted_text' => 'privacy:metadata:adobe_pdf_api:extracted_text',
-            ],
-            'privacy:metadata:adobe_pdf_api'
-        );
-        return $items;
+        return $collection;
     }
 
-    /**
-     * Get the list of contexts that contain user information for the specified user.
-     *
-     * @param int $userid the userid.
-     * @return contextlist the list of contexts containing user info for the user.
-     */
+    #[\Override]
     public static function get_contexts_for_userid(int $userid): contextlist {
+        $sql = "SELECT ctx.id
+                  FROM {context} ctx
+                  JOIN {block_alle_conversations} c ON c.courseid = ctx.instanceid AND ctx.contextlevel = :level1
+                 WHERE c.userid = :userid1
+                 UNION
+                SELECT ctx.id
+                  FROM {context} ctx
+                  JOIN {block_alle_prompts} p ON p.courseid = ctx.instanceid AND ctx.contextlevel = :level2
+                 WHERE p.usermodified = :userid2";
         $contextlist = new contextlist();
-
-        // Get contexts where user has conversations.
-        $sql = "SELECT DISTINCT c.id
-                  FROM {context} c
-                  JOIN {course} co ON co.id = c.instanceid AND c.contextlevel = :contextlevel
-                  JOIN {block_uteluqchatbot_conversations} bc ON bc.courseid = co.id
-                 WHERE bc.userid = :userid";
-
         $contextlist->add_from_sql($sql, [
-            'contextlevel' => CONTEXT_COURSE,
-            'userid' => $userid
+            'level1' => CONTEXT_COURSE,
+            'userid1' => $userid,
+            'level2' => CONTEXT_COURSE,
+            'userid2' => $userid,
         ]);
-
-        // Get contexts where user has prompts.
-        $sql = "SELECT DISTINCT c.id
-                  FROM {context} c
-                  JOIN {course} co ON co.id = c.instanceid AND c.contextlevel = :contextlevel
-                  JOIN {block_uteluqchatbot_prompts} bp ON bp.courseid = co.id
-                 WHERE bp.userid = :userid";
-
-        $contextlist->add_from_sql($sql, [
-            'contextlevel' => CONTEXT_COURSE,
-            'userid' => $userid
-        ]);
-
         return $contextlist;
     }
 
-    /**
-     * Get the list of users who have data within a context.
-     *
-     * @param userlist $userlist The userlist containing the list of users who have data in this context/plugin combination.
-     */
+    #[\Override]
     public static function get_users_in_context(userlist $userlist) {
         $context = $userlist->get_context();
-
         if (!$context instanceof \context_course) {
             return;
         }
-
-        // Get users with conversations in this course.
-        $sql = "SELECT bc.userid
-                  FROM {block_uteluqchatbot_conversations} bc
-                 WHERE bc.courseid = :courseid";
-
-        $userlist->add_from_sql('userid', $sql, ['courseid' => $context->instanceid]);
-
-        // Get users with prompts in this course.
-        $sql = "SELECT bp.userid
-                  FROM {block_uteluqchatbot_prompts} bp
-                 WHERE bp.courseid = :courseid";
-
-        $userlist->add_from_sql('userid', $sql, ['courseid' => $context->instanceid]);
+        $params = ['courseid' => $context->instanceid];
+        $userlist->add_from_sql(
+            'userid',
+            'SELECT userid FROM {block_alle_conversations} WHERE courseid = :courseid',
+            $params
+        );
+        $userlist->add_from_sql(
+            'usermodified',
+            'SELECT usermodified FROM {block_alle_prompts} WHERE courseid = :courseid',
+            $params
+        );
     }
 
-    /**
-     * Export all user data for the specified user, in the specified contexts.
-     *
-     * @param approved_contextlist $contextlist The approved contexts to export information for.
-     */
+    #[\Override]
     public static function export_user_data(approved_contextlist $contextlist) {
         global $DB;
 
-        if (empty($contextlist->count())) {
-            return;
-        }
-
-        $user = $contextlist->get_user();
-
+        $userid = $contextlist->get_user()->id;
         foreach ($contextlist->get_contexts() as $context) {
-            if ($context->contextlevel != CONTEXT_COURSE) {
+            if (!$context instanceof \context_course) {
                 continue;
             }
+            $subcontext = [get_string('pluginname', 'block_alle')];
 
-            // Export conversations.
-            $sql = "SELECT bc.question, bc.answer, bc.timecreated
-                      FROM {block_uteluqchatbot_conversations} bc
-                     WHERE bc.userid = :userid AND bc.courseid = :courseid
-                  ORDER BY bc.timecreated ASC";
-
-            $conversations = $DB->get_records_sql($sql, [
-                'userid' => $user->id,
-                'courseid' => $context->instanceid
-            ]);
-
-            if (!empty($conversations)) {
-                $conversationdata = [];
-                foreach ($conversations as $conversation) {
-                    $conversationdata[] = [
-                        'question' => $conversation->question,
-                        'answer' => $conversation->answer,
-                        'timecreated' => \core_privacy\local\request\transform::datetime($conversation->timecreated),
-                    ];
-                }
-
+            $conversations = $DB->get_records(
+                'block_alle_conversations',
+                ['courseid' => $context->instanceid, 'userid' => $userid],
+                'timecreated ASC, id ASC'
+            );
+            if ($conversations) {
+                $data = array_map(fn($c) => (object) [
+                    'question' => $c->question,
+                    'answer' => $c->answer,
+                    'timecreated' => transform::datetime($c->timecreated),
+                ], array_values($conversations));
                 writer::with_context($context)->export_data(
-                    [get_string('pluginname', 'block_uteluqchatbot'), get_string('conversations', 'block_uteluqchatbot')],
-                    (object) ['conversations' => $conversationdata]
+                    array_merge($subcontext, [get_string('privacy:conversations', 'block_alle')]),
+                    (object) ['conversations' => $data]
                 );
             }
 
-            // Export prompts.
-            $sql = "SELECT bp.prompt, bp.timecreated
-                      FROM {block_uteluqchatbot_prompts} bp
-                     WHERE bp.userid = :userid AND bp.courseid = :courseid
-                  ORDER BY bp.timecreated ASC";
-
-            $prompts = $DB->get_records_sql($sql, [
-                'userid' => $user->id,
-                'courseid' => $context->instanceid
-            ]);
-
-            if (!empty($prompts)) {
-                $promptdata = [];
-                foreach ($prompts as $prompt) {
-                    $promptdata[] = [
-                        'prompt' => $prompt->prompt,
-                        'timecreated' => \core_privacy\local\request\transform::datetime($prompt->timecreated),
-                    ];
-                }
-
+            $prompt = $DB->get_record('block_alle_prompts', ['courseid' => $context->instanceid, 'usermodified' => $userid]);
+            if ($prompt) {
                 writer::with_context($context)->export_data(
-                    [get_string('pluginname', 'block_uteluqchatbot'), get_string('prompts', 'block_uteluqchatbot')],
-                    (object) ['prompts' => $promptdata]
+                    array_merge($subcontext, [get_string('privacy:prompt', 'block_alle')]),
+                    (object) ['prompt' => $prompt->prompt, 'timemodified' => transform::datetime($prompt->timemodified)]
                 );
             }
         }
     }
 
-    /**
-     * Delete all data for all users in the specified context.
-     *
-     * @param \context $context the context to delete in.
-     */
+    #[\Override]
     public static function delete_data_for_all_users_in_context(\context $context) {
         global $DB;
-
-        if ($context->contextlevel != CONTEXT_COURSE) {
+        if (!$context instanceof \context_course) {
             return;
         }
-
-        $DB->delete_records('block_uteluqchatbot_conversations', ['courseid' => $context->instanceid]);
-        $DB->delete_records('block_uteluqchatbot_prompts', ['courseid' => $context->instanceid]);
+        $DB->delete_records('block_alle_conversations', ['courseid' => $context->instanceid]);
+        $DB->delete_records('block_alle_prompts', ['courseid' => $context->instanceid]);
     }
 
-    /**
-     * Delete all user data for the specified user, in the specified contexts.
-     *
-     * @param approved_contextlist $contextlist The approved contexts and user information to delete information for.
-     */
+    #[\Override]
     public static function delete_data_for_user(approved_contextlist $contextlist) {
         global $DB;
-
-        if (empty($contextlist->count())) {
-            return;
-        }
-
-        $user = $contextlist->get_user();
-
+        $userid = $contextlist->get_user()->id;
         foreach ($contextlist->get_contexts() as $context) {
-            if ($context->contextlevel != CONTEXT_COURSE) {
+            if (!$context instanceof \context_course) {
                 continue;
             }
-
-            $DB->delete_records('block_uteluqchatbot_conversations', [
-                'userid' => $user->id,
-                'courseid' => $context->instanceid
-            ]);
-
-            $DB->delete_records('block_uteluqchatbot_prompts', [
-                'userid' => $user->id,
-                'courseid' => $context->instanceid
+            $DB->delete_records('block_alle_conversations', ['courseid' => $context->instanceid, 'userid' => $userid]);
+            $DB->set_field('block_alle_prompts', 'usermodified', 0, [
+                'courseid' => $context->instanceid,
+                'usermodified' => $userid,
             ]);
         }
     }
 
-    /**
-     * Delete multiple users within a single context.
-     *
-     * @param approved_userlist $userlist The approved context and user information to delete information for.
-     */
+    #[\Override]
     public static function delete_data_for_users(approved_userlist $userlist) {
         global $DB;
-
         $context = $userlist->get_context();
-
-        if ($context->contextlevel != CONTEXT_COURSE) {
+        if (!$context instanceof \context_course || !$userlist->get_userids()) {
             return;
         }
-
-        $userids = $userlist->get_userids();
-
-        if (empty($userids)) {
-            return;
-        }
-
-        list($usersql, $userparams) = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
-
-        $DB->delete_records_select('block_uteluqchatbot_conversations',
-            "courseid = :courseid AND userid {$usersql}",
-            array_merge(['courseid' => $context->instanceid], $userparams)
-        );
-
-        $DB->delete_records_select('block_uteluqchatbot_prompts',
-            "courseid = :courseid AND userid {$usersql}",
-            array_merge(['courseid' => $context->instanceid], $userparams)
-        );
+        [$insql, $params] = $DB->get_in_or_equal($userlist->get_userids(), SQL_PARAMS_NAMED);
+        $params['courseid'] = $context->instanceid;
+        $DB->delete_records_select('block_alle_conversations', "courseid = :courseid AND userid $insql", $params);
+        $DB->set_field_select('block_alle_prompts', 'usermodified', 0, "courseid = :courseid AND usermodified $insql", $params);
     }
 }

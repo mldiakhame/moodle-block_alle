@@ -1,65 +1,49 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
- * External services for uteluqchatbot block
- * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
+ * External functions of ALL-E.
+ *
+ * @package    block_alle
+ * @copyright  2025 Université TÉLUQ and Université Gaston Berger de Saint-Louis
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $functions = [
-    'block_uteluqchatbot_send_question' => [
-        'classname'   => 'block_uteluqchatbot\external\send_question',
-        'methodname'  => 'execute',
-        'classpath'   => '',
-        'description' => 'Send a question to the chatbot',
-        'type'        => 'write',
-        'ajax'        => true,
-        'capabilities' => '',
-        'loginrequired' => true,
+    'block_alle_send_question' => [
+        'classname' => 'block_alle\external\send_question',
+        'description' => 'Ask the course assistant a question.',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'block/alle:ask',
     ],
-    'block_uteluqchatbot_save_prompt' => [
-        'classname'   => 'block_uteluqchatbot\external\save_prompt',
-        'methodname'  => 'execute',
-        'classpath'   => '',
-        'description' => 'Save or update a chatbot prompt',
-        'type'        => 'write',
-        'ajax'        => true,
-        'capabilities' => '',
-        'loginrequired' => true,
+    'block_alle_save_prompt' => [
+        'classname' => 'block_alle\external\save_prompt',
+        'description' => 'Save the teacher prompt of a course.',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'block/alle:managecontent',
     ],
-    'block_uteluqchatbot_upload_file' => [
-        'classname'   => 'block_uteluqchatbot\external\upload_file',
-        'methodname'  => 'execute',
-        'classpath'   => '',
-        'description' => 'Upload and process a file for the chatbot',
-        'type'        => 'write',
-        'ajax'        => true,
-        'capabilities' => '',
-        'loginrequired' => true,
+    'block_alle_upload_files' => [
+        'classname' => 'block_alle\external\upload_files',
+        'description' => 'Replace the documents the assistant answers from.',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'block/alle:managecontent',
     ],
-    'block_uteluqchatbot_upload_files' => [
-        'classname'   => 'block_uteluqchatbot\external\upload_files',
-        'methodname'  => 'execute',
-        'classpath'   => '',
-        'description' => 'Upload and index multiple files for the chatbot',
-        'type'        => 'write',
-        'ajax'        => true,
-        'capabilities' => 'moodle/course:update',
-        'loginrequired' => true,
-    ],
-];
-
-$services = [
-    'UGB Chatbot Services' => [
-        'functions' => [
-            'block_uteluqchatbot_send_question',
-            'block_uteluqchatbot_save_prompt',
-            'block_uteluqchatbot_upload_file',
-            'block_uteluqchatbot_upload_files'
-        ],
-        'restrictedusers' => 0,
-        'enabled' => 1,
-        'downloadfiles' => 0,
-        'uploadfiles' => 1
-    ]
 ];

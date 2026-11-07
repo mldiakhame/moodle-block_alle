@@ -1,8 +1,4 @@
 <?php
-/**
- * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
- */
-
 // This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -19,33 +15,18 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * @package     block_uteluqchatbot
- * @copyright   2025 Universié TÉLUQ
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * Version information for ALL-E.
+ *
+ * @package    block_alle
+ * @copyright  2025 Université TÉLUQ and Université Gaston Berger de Saint-Louis
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-// Full name of the plugin (type_name) - Here, a block named "uteluqchatbot".
-$plugin->component = 'block_uteluqchatbot';
-
-// Human-readable version - Recommended format: major.minor.patch.
-$plugin->release = '0.6.0';
-
-// Internal version number - Format YYYYMMDDXX (year, month, day, increment).
-$plugin->version = 2026051301;
-
-// Minimum required version of Moodle (here Moodle 4.1 - November 2022).
-// This corresponds to Moodle 4.1.
-$plugin->requires = 2022112800;
-
-// Plugin maturity level - Four possible options:
-// MATURITY_ALPHA: Very early version, actively under development with incomplete features.
-//                 May contain significant bugs and is not recommended for production.
-// MATURITY_BETA: Testing version with all major features implemented.
-//                May still contain bugs and requires further testing.
-// MATURITY_RC: "Release Candidate" - Nearly finalized version in final testing phase.
-//              Features are complete, and most bugs are resolved.
-// MATURITY_STABLE: Stable version, tested and ready for production use.
-//                  Recommended for general use.
-$plugin->maturity = MATURITY_ALPHA;
+$plugin->component = 'block_alle';
+$plugin->version = 2026110700;
+$plugin->release = '1.0.0';
+$plugin->requires = 2024100700; // Moodle 4.5.
+$plugin->supported = [405, 502];
+$plugin->maturity = MATURITY_BETA;

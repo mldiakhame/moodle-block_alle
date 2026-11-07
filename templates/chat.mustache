@@ -1,0 +1,154 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_alle/chat
+
+    Chat with the course assistant. Teachers also get the prompt editor and the
+    document upload dialogs.
+
+    Context variables required for this template:
+    * uniqid - Unique ID of this instance, used by the JavaScript.
+    * coursename - Course full name.
+    * canmanage - Whether the user can edit the prompt and upload documents.
+    * prompt - Current prompt of the course, for teachers.
+    * maxfilesize - Largest accepted file, human readable.
+
+    Example context (json):
+    {
+        "uniqid": "block_alle_123",
+        "coursename": "Introduction to generative AI in education",
+        "canmanage": true,
+        "prompt": "You support learners of [[ coursename ]]...",
+        "maxfilesize": "10 MB"
+    }
+}}
+<div class="block_alle" id="{{uniqid}}">
+    <div class="chatbot-wrap">
+        <div class="chatbot-header">
+            <div class="chatbot-header-left">
+                <div class="chatbot-avatar" aria-hidden="true">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="20" cy="20" r="20" fill="url(#{{uniqid}}-gradient)"/>
+                        <path d="M13 16a7 7 0 0 1 14 0v3a7 7 0 0 1-14 0v-3z" fill="white" opacity=".9"/>
+                        <path d="M16 24.5c0 2.2 1.8 4 4 4s4-1.8 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                        <defs>
+                            <linearGradient id="{{uniqid}}-gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#6366f1"/>
+                                <stop offset="1" stop-color="#8b5cf6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="chatbot-header-info">
+                    <span class="chatbot-name">{{#str}}pluginname, block_alle{{/str}}</span>
+                    <span class="chatbot-course">{{coursename}}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chatbot-messages" data-region="messages" role="log" aria-live="polite" aria-label="{{#str}}chathistory, block_alle{{/str}}">
+            <div class="chatbot-message bot-msg welcome-msg">
+                <div class="msg-bubble">
+                    {{#canmanage}}{{#str}}welcometeacher, block_alle{{/str}}{{/canmanage}}
+                    {{^canmanage}}{{#str}}welcomelearner, block_alle{{/str}}{{/canmanage}}
+                </div>
+            </div>
+        </div>
+
+        <div class="chatbot-error" data-region="error" role="alert"></div>
+
+        <div class="cb-upload-status" data-region="uploadstatus" aria-live="polite" hidden>
+            <span class="cb-upload-spin" aria-hidden="true"></span>
+            <span class="cb-upload-label">{{#str}}indexing, block_alle{{/str}}</span>
+        </div>
+
+        <div class="chatbot-footer">
+            <form class="chatbot-form" data-region="questionform" autocomplete="off">
+                <label for="{{uniqid}}-question" class="sr-only">{{#str}}askquestion, block_alle{{/str}}</label>
+                <textarea id="{{uniqid}}-question" name="question" class="chatbot-input" rows="1" required
+                    placeholder="{{#str}}askquestion, block_alle{{/str}}"></textarea>
+                <button type="submit" class="chatbot-send" aria-label="{{#str}}send, block_alle{{/str}}">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </form>
+
+            {{#canmanage}}
+            <div class="chatbot-teacher-bar">
+                <button type="button" class="chatbot-tool-btn" data-action="open" data-target="promptdialog">
+                    {{#str}}editprompt, block_alle{{/str}}
+                </button>
+                <button type="button" class="chatbot-tool-btn" data-action="open" data-target="uploaddialog">
+                    {{#str}}uploaddocuments, block_alle{{/str}}
+                </button>
+            </div>
+            {{/canmanage}}
+        </div>
+    </div>
+
+    {{#canmanage}}
+    <div class="modal" data-region="promptdialog" role="dialog" aria-modal="true" aria-labelledby="{{uniqid}}-prompttitle" hidden>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="{{uniqid}}-prompttitle">{{#str}}editprompt, block_alle{{/str}}</h5>
+                    <button type="button" class="close" data-action="close" aria-label="{{#str}}closebuttontitle, core{{/str}}">&times;</button>
+                </div>
+                <form data-region="promptform">
+                    <div class="modal-body">
+                        <p>{{#str}}prompthelp, block_alle{{/str}}</p>
+                        <label for="{{uniqid}}-prompt">{{#str}}prompt, block_alle{{/str}}</label>
+                        <textarea id="{{uniqid}}-prompt" name="prompt" class="form-input prompt-textarea" rows="14">{{prompt}}</textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-action="close">{{#str}}cancel, core{{/str}}</button>
+                        <button type="submit" class="btn btn-primary">{{#str}}savechanges, core{{/str}}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" data-region="uploaddialog" role="dialog" aria-modal="true" aria-labelledby="{{uniqid}}-uploadtitle" hidden>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="{{uniqid}}-uploadtitle">{{#str}}uploaddocuments, block_alle{{/str}}</h5>
+                    <button type="button" class="close" data-action="close" aria-label="{{#str}}closebuttontitle, core{{/str}}">&times;</button>
+                </div>
+                <form data-region="uploadform">
+                    <div class="modal-body">
+                        <p>{{#str}}uploadhelp, block_alle, {{maxfilesize}}{{/str}}</p>
+                        <div class="file-upload-container" data-region="dropzone">
+                            <label class="file-upload-box" for="{{uniqid}}-files">
+                                <span class="upload-text">{{#str}}dropfiles, block_alle{{/str}}</span>
+                            </label>
+                            <input type="file" id="{{uniqid}}-files" class="file-input" accept=".pdf,.txt,.text,.md" multiple>
+                        </div>
+                        <ul class="list-unstyled mt-2" data-region="filelist"></ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-action="close">{{#str}}cancel, core{{/str}}</button>
+                        <button type="submit" class="btn btn-primary">{{#str}}index, block_alle{{/str}}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {{/canmanage}}
+</div>

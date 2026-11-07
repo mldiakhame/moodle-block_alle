@@ -1,29 +1,61 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
- * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
+ * Capabilities for ALL-E.
+ *
+ * @package    block_alle
+ * @copyright  2025 Université TÉLUQ and Université Gaston Berger de Saint-Louis
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$capabilities = array(
-    // Capability to add the block to a course.
-    'block/uteluqchatbot:addinstance' => array(
-        'riskbitmask'  => RISK_SPAM | RISK_PERSONAL | RISK_XSS, // Risks associated with this capability.
-        'captype'      => 'write', // Capability type (write).
-        'contextlevel' => CONTEXT_BLOCK, // Block context.
-        'archetypes'   => array(
-            'editingteacher' => CAP_ALLOW, // Teachers can add the block.
-            'manager'       => CAP_ALLOW, // Managers can add the block.
-        ),
-    ),
+$capabilities = [
+    'block/alle:addinstance' => [
+        'riskbitmask' => RISK_SPAM | RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_BLOCK,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'moodle/site:manageblocks',
+    ],
 
-    // Capability to manage the plugin settings.
-    'block/uteluqchatbot:manage' => array(
-        'riskbitmask'  => RISK_CONFIG, // Risk associated with modifying configurations.
-        'captype'      => 'write', // Capability type (write).
-        'contextlevel' => CONTEXT_SYSTEM, // System context.
-        'archetypes'   => array(
-            'manager' => CAP_ALLOW, // Only managers can manage the plugin.
-        ),
-    ),
-);
+    // Ask questions to the assistant of a course.
+    'block/alle:ask' => [
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'student' => CAP_ALLOW,
+            'teacher' => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+    ],
+
+    // Edit the course prompt and replace the indexed course documents.
+    'block/alle:managecontent' => [
+        'riskbitmask' => RISK_SPAM,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+    ],
+];

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to detect non-English comments in PHP, JS, and Mustache files in the Moodle block_uteluqchatbot project.
+Script to detect non-English comments in PHP, JS, and Mustache files in the Moodle block_alle project.
 This script automatically scans from the project root and reports all non-English comments found.
 
 Prerequisites:
@@ -26,7 +26,7 @@ DetectorFactory.seed = 0
 
 # Directories to ignore
 IGNORED_DIRS = [
-    'node_modules', 
+    'node_modules', 'ignore',
     'vendor', 
     '.git', 
     '__pycache__', 

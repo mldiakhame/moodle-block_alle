@@ -1,126 +1,99 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+namespace block_alle\external;
+
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+
 /**
- * External service for saving prompts
- * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
+ * Saves the prompt that frames the assistant's answers in a course.
+ *
+ * An empty prompt removes the teacher prompt, so the default one applies again.
+ *
+ * @package    block_alle
+ * @copyright  2025 Université TÉLUQ and Université Gaston Berger de Saint-Louis
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-namespace block_uteluqchatbot\external;
-
-use external_api;
-use external_function_parameters;
-use external_value;
-use external_single_structure;
-use context_course;
-use invalid_parameter_exception;
-use dml_exception;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
-
-class save_prompt extends external_api
-{
-
+class save_prompt extends external_api {
     /**
-     * Define parameters for the external function
+     * Parameters.
+     *
+     * @return external_function_parameters
      */
-    public static function execute_parameters()
-    {
+    public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'prompttext' => new external_value(PARAM_RAW, 'The prompt text'),
-            'userid' => new external_value(PARAM_INT, 'User ID'),
             'courseid' => new external_value(PARAM_INT, 'Course ID'),
+            'prompt' => new external_value(PARAM_RAW, 'Prompt text'),
         ]);
     }
 
     /**
-     * Execute the external function
+     * Save the prompt.
      *
-     * @param string $prompttext The prompt text to save
-     * @param int $userid The user ID for whom the prompt is saved
-     * @param int $courseid The course ID associated with the prompt
-     * @return array Status and message or error
-     * @throws invalid_parameter_exception If the user is invalid
-     * @throws dml_exception If a database error occurs
+     * @param int $courseid
+     * @param string $prompt
+     * @return array
      */
-    public static function execute($prompttext, $userid, $courseid)
-    {
+    public static function execute(int $courseid, string $prompt): array {
         global $DB, $USER;
 
-        // Validate parameters
-        $params = self::validate_parameters(self::execute_parameters(), [
-            'prompttext' => $prompttext,
-            'userid' => $userid,
-            'courseid' => $courseid,
-        ]);
-
-        // Security checks
-        require_login();
-
-        // Check if user can access this course
-        $context = context_course::instance($params['courseid']);
+        ['courseid' => $courseid, 'prompt' => $prompt] = self::validate_parameters(
+            self::execute_parameters(),
+            ['courseid' => $courseid, 'prompt' => $prompt]
+        );
+        $context = \context_course::instance($courseid);
         self::validate_context($context);
+        require_capability('block/alle:managecontent', $context);
 
-        // Verify user is the same as the one making the request
-        if ($USER->id != $params['userid']) {
-            throw new invalid_parameter_exception('Invalid user');
-        }
+        $prompt = trim(clean_param($prompt, PARAM_NOTAGS));
+        $existing = $DB->get_record('block_alle_prompts', ['courseid' => $courseid]);
+        $now = time();
 
-        try {
-            // Check if a prompt already exists for this user
-            $existing_prompt = $DB->get_record('block_uteluqchatbot_prompts', ['userid' => $params['userid']]);
-
-            $record = new \stdClass();
-            $record->prompt = $params['prompttext'];
-            $record->userid = $params['userid'];
-            $record->courseid = $params['courseid'];
-            $record->timemodified = time();
-
-            if ($existing_prompt) {
-                // Update the existing prompt
-                $record->id = $existing_prompt->id;
-                $DB->update_record('block_uteluqchatbot_prompts', $record);
-            } else {
-                // Create a new prompt
-                $record->timecreated = time();
-                $DB->insert_record('block_uteluqchatbot_prompts', $record);
+        if ($prompt === '') {
+            if ($existing) {
+                $DB->delete_records('block_alle_prompts', ['id' => $existing->id]);
             }
-
-            return [
-                'status' => 'success',
-                'message' => get_string('prompt_saved_successfully', 'block_uteluqchatbot')
-            ];
-
-        } catch (dml_exception $e) {
-            return [
-                'status' => 'error',
-                'error' => get_string('database_write_error', 'block_uteluqchatbot') . $e->getMessage()
-            ];
-        } catch (\Exception $e) {
-            return [
-                'status' => 'error',
-                'error' => $e->getMessage()
-            ];
+        } else if ($existing) {
+            $existing->prompt = $prompt;
+            $existing->usermodified = $USER->id;
+            $existing->timemodified = $now;
+            $DB->update_record('block_alle_prompts', $existing);
+        } else {
+            $DB->insert_record('block_alle_prompts', (object) [
+                'courseid' => $courseid,
+                'prompt' => $prompt,
+                'usermodified' => $USER->id,
+                'timecreated' => $now,
+                'timemodified' => $now,
+            ]);
         }
+        return ['success' => true];
     }
 
     /**
-     * Define return values for the external function
-     * 
-     * Specifies the structure and data types of the response returned by the execute() method.
-     * This definition is required by Moodle's external API framework for validation,
-     * documentation generation, and web service compatibility.
-     * 
-     * @return external_single_structure The structured definition of the response format
-     * @see external_single_structure Moodle's external API structure class
-     * @see execute() The main function that returns data matching this structure
+     * Return structure.
+     *
+     * @return external_single_structure
      */
-    public static function execute_returns()
-    {
+    public static function execute_returns(): external_single_structure {
         return new external_single_structure([
-            'status' => new external_value(PARAM_TEXT, 'Status of the request'),
-            'message' => new external_value(PARAM_TEXT, 'Success message', VALUE_OPTIONAL),
-            'error' => new external_value(PARAM_TEXT, 'Error message if any', VALUE_OPTIONAL),
+            'success' => new external_value(PARAM_BOOL, 'Whether the prompt was saved'),
         ]);
     }
 }

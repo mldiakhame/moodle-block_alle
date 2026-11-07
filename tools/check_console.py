@@ -10,7 +10,7 @@ def get_js_files(parent_dir):
     js_files = []
     for root, dirs, files in os.walk(parent_dir):
         # Exclude node_modules from traversal
-        dirs[:] = [d for d in dirs if d != 'node_modules']
+        dirs[:] = [d for d in dirs if d not in ('node_modules', 'ignore')]
         for file in files:
             if file.endswith('.js'):
                 js_files.append(os.path.join(root, file))

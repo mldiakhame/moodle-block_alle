@@ -8,10 +8,11 @@ def scan_files_for_strings(directory):
     
     # Regular expressions for different patterns
     get_string_pattern = r"get_string\s*\(\s*['\"]([^'\"]+)['\"]\s*,.*?\)"
-    mustache_pattern = r"\{\{#str\}\}\s*([^,\s]+)\s*,\s*block_uteluqchatbot\s*\{\{/str\}\}"
+    mustache_pattern = r"\{\{#str\}\}\s*([^,\s]+)\s*,\s*block_alle\s*\{\{/str\}\}"
     
     # Walk through directory
     for root, dirs, files in os.walk(directory):
+        dirs[:] = [d for d in dirs if d not in ('node_modules', 'ignore')]
         # Skip directories named 'lang'
         if 'lang' in dirs:
             dirs.remove('lang')
@@ -98,7 +99,7 @@ def main():
 
     error_found = False
     for lang in sorted(os.listdir(lang_dir)):
-        lang_file_path = os.path.join(lang_dir, lang, 'block_uteluqchatbot.php')
+        lang_file_path = os.path.join(lang_dir, lang, 'block_alle.php')
         if not os.path.isfile(lang_file_path):
             continue
         print(f"\n=== Language: {lang} ===")
