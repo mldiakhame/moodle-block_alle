@@ -166,7 +166,6 @@
 .block_alle .msg-bubble {
     background: var(--cb-bg);
     border: 1px solid var(--cb-border);
-    border-bottom-left-radius: 4px;
     border-radius: var(--cb-radius-md);
     color: var(--cb-text);
     font-size: .875rem;

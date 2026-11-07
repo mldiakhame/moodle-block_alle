@@ -106,16 +106,22 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci grunt --max-lint-warnings 0
 
+      - name: Build JavaScript with Moodle's toolchain
+        id: amdbuild
+        if: ${{ failure() && steps.grunt.outcome == 'failure' && matrix.moodle-branch == 'MOODLE_405_STABLE' && matrix.database == 'pgsql' }}
+        working-directory: moodle/blocks/alle
+        run: |
+          source "$NVM_DIR/nvm.sh"
+          nvm use
+          npx grunt amd --force
+
       - name: Upload rebuilt JavaScript
-        if: ${{ failure() && steps.grunt.outcome == 'failure' }}
+        if: ${{ failure() && steps.amdbuild.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: amd-build (${{ matrix.moodle-branch }}, ${{ matrix.database }})
-          path: |
-            ${{ github.workspace }}/moodle/blocks/alle/amd/build
-            ${{ github.workspace }}/moodle/public/blocks/alle/amd/build
+          name: amd-build
+          path: ${{ github.workspace }}/moodle/blocks/alle/amd/build
           retention-days: 7
-          if-no-files-found: ignore
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}
