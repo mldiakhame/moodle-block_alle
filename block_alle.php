@@ -35,7 +35,9 @@ use block_alle\local\rag\prompt_builder;
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class block_alle extends block_base {
-    #[\Override]
+    /**
+     * Set the block title.
+     */
     public function init() {
         $this->title = get_string('pluginname', 'block_alle');
     }
