@@ -1,92 +1,111 @@
 {{!
     @template block_uteluqchatbot/chatbot_main
 
-    Main chatbot interface for the TÉLUQ chatbot block.
-
-    This template renders the complete chatbot interface including the chat area,
-    input form, and administration buttons. Features include:
-    - Welcome message customized by user role (teacher/student)
-    - Real-time chat message display area
-    - Text input with send button for user questions
-    - Role-based administration buttons (teachers only)
-    - Responsive design with proper accessibility
-    - Bot avatar and message styling
-
-    The interface adapts based on user permissions:
-    - Students: See chat interface only
-    - Teachers: Additional buttons for prompt modification and file upload
+    Main chatbot interface.
 
     Context variables:
-    * isteacher (bool) - Whether the current user has teacher capabilities
-    
-    Example context (JSON):
-    {
-        "isteacher": true
-    }
+    * isteacher (bool)
+    * coursename (string)
 
     @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
 }}
+<div class="block_uteluqchatbot">
+    <div class="chatbot-wrap">
 
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>{{#str}}chatbot_with_toggle_buttons, block_uteluqchatbot{{/str}}</title>
-    <style>
-
-    </style>
-</head>
-<body>
-<div class="block_uteluqchatbot block-chatbot-container">
-    <div id="chat-messages" class="chat-messages">
-        <div class="welcome-message">
-            <div class="bot-avatar">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" fill="#6366F1"/>
-                    <path d="M12 6C9.79 6 8 7.79 8 10V14C8 16.21 9.79 18 12 18C14.21 18 16 16.21 16 14V10C16 7.79 14.21 6 12 6Z" fill="white"/>
-                </svg>
+        {{! ── Header ── }}
+        <div class="chatbot-header">
+            <div class="chatbot-header-left">
+                <div class="chatbot-avatar" aria-hidden="true">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="20" cy="20" r="20" fill="url(#hg)"/>
+                        <path d="M13 16a7 7 0 0 1 14 0v3a7 7 0 0 1-14 0v-3z" fill="white" opacity=".9"/>
+                        <path d="M16 24.5c0 2.2 1.8 4 4 4s4-1.8 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                        <defs>
+                            <linearGradient id="hg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#6366f1"/>
+                                <stop offset="1" stop-color="#8b5cf6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="chatbot-header-info">
+                    <span class="chatbot-name">UGB Chatbot</span>
+                    {{#coursename}}
+                    <span class="chatbot-course">{{coursename}}</span>
+                    {{/coursename}}
+                </div>
             </div>
-            <div class="message bot-message">
-                {{#isteacher}}
-                {{#str}}hello_professor, block_uteluqchatbot{{/str}}
-                {{/isteacher}}
-                {{^isteacher}}
-                {{#str}}hello_student, block_uteluqchatbot{{/str}}
-                {{/isteacher}}
+            <div class="chatbot-header-right">
+                <span class="chatbot-status-dot" title="{{#str}}online, block_uteluqchatbot{{/str}}"></span>
             </div>
         </div>
-    </div>
-    <div id="error-message" class="error-message"></div>
-    <div class="chat-input-container">
-        <form id="chatform" class="chat-form">
-            <input type="text" id="question" name="question"
-                   class="chat-input" placeholder="{{#str}}ask_your_question_here, block_uteluqchatbot{{/str}}" required>
-            <button type="submit" class="send-button">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="white"/>
-                </svg>
-            </button>
-        </form>
-        <div class="button-container">
+
+        {{! ── Messages ── }}
+        <div id="chat-messages" class="chatbot-messages" role="log" aria-live="polite" aria-label="{{#str}}chat_history, block_uteluqchatbot{{/str}}">
+            <div class="chatbot-message bot-msg welcome-msg">
+                <div class="msg-avatar" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="12" fill="url(#hg2)"/>
+                        <path d="M8 10a4 4 0 0 1 8 0v2a4 4 0 0 1-8 0v-2z" fill="white" opacity=".9"/>
+                        <defs>
+                            <linearGradient id="hg2" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#6366f1"/>
+                                <stop offset="1" stop-color="#8b5cf6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="msg-bubble">
+                    {{#isteacher}}
+                    {{#str}}hello_professor, block_uteluqchatbot{{/str}}
+                    {{/isteacher}}
+                    {{^isteacher}}
+                    {{#str}}hello_student, block_uteluqchatbot{{/str}}
+                    {{/isteacher}}
+                </div>
+            </div>
+        </div>
+
+        {{! ── Error zone ── }}
+        <div id="error-message" class="chatbot-error" role="alert" aria-live="assertive"></div>
+
+        {{! ── Upload status bar (shown during file indexing) ── }}
+        <div class="cb-upload-status" id="cb-upload-status" aria-live="polite">
+            <span class="cb-upload-spin"></span>
+            <span class="cb-upload-label"></span>
+        </div>
+
+        {{! ── Input zone ── }}
+        <div class="chatbot-footer">
+            <form id="chatform" class="chatbot-form" autocomplete="off">
+                <label for="question" class="sr-only">{{#str}}ask_your_question_here, block_uteluqchatbot{{/str}}</label>
+                <textarea id="question" name="question" class="chatbot-input"
+                          placeholder="{{#str}}ask_your_question_here, block_uteluqchatbot{{/str}}"
+                          rows="1" required></textarea>
+                <button type="submit" class="chatbot-send" aria-label="{{#str}}send, block_uteluqchatbot{{/str}}">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </form>
+
             {{#isteacher}}
-            <button id="toggle-prompt-form" class="prompt-button" onclick="togglePromptModal()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
-                </svg>
-                {{#str}}modify_prompt, block_uteluqchatbot{{/str}}
-            </button>
-            <button id="toggle-file-upload-form" class="file-upload-button" onclick="toggleFileUploadModal()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
-                </svg>
-                {{#str}}upload_course, block_uteluqchatbot{{/str}}
-            </button>
+            <div class="chatbot-teacher-bar">
+                <button class="chatbot-tool-btn" onclick="togglePromptModal()" type="button">
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                    </svg>
+                    {{#str}}modify_prompt, block_uteluqchatbot{{/str}}
+                </button>
+                <button class="chatbot-tool-btn" onclick="toggleFileUploadModal()" type="button">
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm3.293-7.707a1 1 0 0 1 1.414 0L9 10.586V3a1 1 0 1 1 2 0v7.586l1.293-1.293a1 1 0 1 1 1.414 1.414l-3 3a1 1 0 0 1-1.414 0l-3-3a1 1 0 0 1 0-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                    {{#str}}upload_course, block_uteluqchatbot{{/str}}
+                </button>
+            </div>
             {{/isteacher}}
         </div>
+
     </div>
 </div>
-
-
-
-</body>
-</html>

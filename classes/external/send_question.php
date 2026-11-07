@@ -1,7 +1,9 @@
 <?php
 /**
- * External service for sending questions to chatbot
+ * External service for sending questions to chatbot.
+ *
  * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 namespace block_uteluqchatbot\external;
@@ -18,145 +20,204 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 
-class send_question extends external_api
-{
+class send_question extends external_api {
 
-    /**
-     * Define parameters for the external function
-     */
-    public static function execute_parameters()
-    {
+    public static function execute_parameters() {
         return new external_function_parameters([
-            'question' => new external_value(PARAM_RAW, 'The question to send'),
-            'userid' => new external_value(PARAM_INT, 'User ID'),
-            'courseid' => new external_value(PARAM_INT, 'Course ID'),
-            'sansrag' => new external_value(PARAM_BOOL, 'Without RAG', VALUE_DEFAULT, false),
+            'question' => new external_value(PARAM_RAW,  'The question to send'),
+            'userid'   => new external_value(PARAM_INT,  'User ID'),
+            'courseid' => new external_value(PARAM_INT,  'Course ID'),
+            'sansrag'  => new external_value(PARAM_BOOL, 'Without RAG', VALUE_DEFAULT, false),
         ]);
     }
 
-    /**
-     * Execute the external function
-     * 
-     * @param string $question The user's question or query to be processed
-     * @param int $userid The ID of the user asking the question
-     * @param int $courseid The ID of the course context where the question is asked
-     * @param bool $sansrag Optional. Whether to execute without RAG (Retrieval-Augmented Generation). 
-     *                      If true, bypasses document retrieval. Default is false.
-     * @return array Response array containing the chatbot's answer and metadata
-     * @throws Exception If validation fails or processing encounters an error
-     */
-    public static function execute($question, $userid, $courseid, $sansrag = false)
-    {
+    public static function execute($question, $userid, $courseid, $sansrag = false) {
         global $DB, $USER;
 
-        // Validate parameters
         $params = self::validate_parameters(self::execute_parameters(), [
             'question' => $question,
-            'userid' => $userid,
+            'userid'   => $userid,
             'courseid' => $courseid,
-            'sansrag' => $sansrag,
+            'sansrag'  => $sansrag,
         ]);
 
-        // Security checks
         require_login();
-
-        // Check if user can access this course
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
 
-        // Verify user is the same as the one making the request
         if ($USER->id != $params['userid']) {
             throw new invalid_parameter_exception('Invalid user');
         }
 
         try {
-            // Sanitize input
             $question = self::sanitize_chatbot_input(trim($params['question']));
-
             if (empty($question)) {
-                throw new invalid_parameter_exception(get_string('invalid_question_after_sanitize', 'block_uteluqchatbot'));
+                throw new invalid_parameter_exception(
+                    get_string('invalid_question_after_sanitize', 'block_uteluqchatbot')
+                );
             }
 
-            // Get configuration
-            $weaviate_api_url = get_config('block_uteluqchatbot', 'weaviate_api_url');
-            if (strpos($weaviate_api_url, 'https://') !== 0) {
-                $weaviate_api_url = 'https://' . $weaviate_api_url;
-            }
-            $weaviate_api_key = get_config('block_uteluqchatbot', 'weaviate_api_key');
-            $cohere_api_key = get_config('block_uteluqchatbot', 'cohere_embedding_api_key');
+            // Build the provider and connector.
+            $connector = self::build_connector();
 
-            if (empty($weaviate_api_url) || empty($cohere_api_key)) {
-                throw new \moodle_exception('weaviate_cohere_not_configured', 'block_uteluqchatbot');
-            }
-
-            // Initialize connector
-            $weaviate_connector = new \block_uteluqchatbot\weaviate_connector(
-                $weaviate_api_url,
-                $weaviate_api_key,
-                $cohere_api_key
-            );
-
-            // Get course information
-            $course_record = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
-            $course_name = $course_record->fullname;
+            $course_record   = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
+            $course_name     = $course_record->fullname;
             $collection_name = 'Collection_course_' . $params['courseid'];
 
-            // Get answer
             if ($params['sansrag']) {
-                $answer = $weaviate_connector->get_cohere_response($question, $cohere_api_key);
+                $answer = $connector->get_llm_response($question);
             } else {
-                $answer = $weaviate_connector->get_question_answer($course_name, $collection_name, $question, $params['userid'], $params['courseid']);
+                $rag_mode = get_config('block_uteluqchatbot', 'rag_mode') ?: 'normal';
+
+                if ($rag_mode === 'agentic') {
+                    $provider_id = get_config('block_uteluqchatbot', 'llm_provider') ?: 'openrouter';
+                    $embedder    = self::build_embedder($provider_id);
+                    $llm         = self::build_llm_provider($provider_id);
+                    $ag_agent    = new \block_uteluqchatbot\agentic_rag\agent(
+                        $embedder, $llm, $connector, $collection_name
+                    );
+                    $answer = $ag_agent->answer(
+                        $question, $course_name,
+                        $params['userid'], $params['courseid']
+                    );
+                    if ($answer === null) {
+                        $error = $ag_agent->get_last_error();
+                        throw new \moodle_exception('empty_response_from_api', 'block_uteluqchatbot', '', $error);
+                    }
+                } else {
+                    $answer = $connector->get_question_answer(
+                        $course_name,
+                        $collection_name,
+                        $question,
+                        $params['userid'],
+                        $params['courseid']
+                    );
+                }
             }
 
-            if (is_null($answer) || $answer === false) {
-                throw new \moodle_exception('empty_response_from_api', 'block_uteluqchatbot');
+            if ($answer === null || $answer === false) {
+                $error = $connector->get_last_error();
+                throw new \moodle_exception(
+                    'empty_response_from_api',
+                    'block_uteluqchatbot',
+                    '',
+                    $error
+                );
             }
 
-            // Save conversation
-            self::save_conversation($params['userid'], $params['courseid'], $question, $answer);
+            self::save_conversation((int)$params['userid'], (int)$params['courseid'], $question, $answer);
 
             return [
                 'status' => 'success',
-                'answer' => is_string($answer) ? $answer : json_encode($answer)
+                'answer' => is_string($answer) ? $answer : json_encode($answer),
             ];
 
         } catch (\Exception $e) {
             return [
                 'status' => 'error',
-                'error' => $e->getMessage()
+                'error'  => $e->getMessage(),
             ];
         }
     }
 
-    /**
-     * Define return values for the external function
-     */
-    public static function execute_returns()
-    {
+    public static function execute_returns() {
         return new external_single_structure([
             'status' => new external_value(PARAM_TEXT, 'Status of the request'),
-            'answer' => new external_value(PARAM_RAW, 'The chatbot answer', VALUE_OPTIONAL),
-            'error' => new external_value(PARAM_TEXT, 'Error message if any', VALUE_OPTIONAL),
+            'answer' => new external_value(PARAM_RAW,  'The chatbot answer', VALUE_OPTIONAL),
+            'error'  => new external_value(PARAM_TEXT, 'Error message if any', VALUE_OPTIONAL),
         ]);
     }
 
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
     /**
-     * Sanitize chatbot input
-     * 
-     * Cleans and validates user input to prevent security vulnerabilities
-     * such as XSS attacks, SQL injection, and malicious content injection.
-     * 
-     * @param string $input The raw user input string to be sanitized
-     * @return string The sanitized and safe input string
-     * @since 1.0.0
+     * Build the weaviate_connector from plugin configuration.
+     *
+     * The embedder and LLM provider both come from the same platform:
+     * - openrouter → OpenRouter embeddings + OpenRouter generation
+     * - huggingface → HuggingFace embeddings + HuggingFace generation
+     *
+     * @return \block_uteluqchatbot\weaviate_connector
+     * @throws \moodle_exception
      */
-    private static function sanitize_chatbot_input($input)
-    {
+    public static function build_connector(): \block_uteluqchatbot\weaviate_connector {
+        $weaviate_url = get_config('block_uteluqchatbot', 'weaviate_api_url');
+        $weaviate_key = get_config('block_uteluqchatbot', 'weaviate_api_key');
+        $provider_id  = get_config('block_uteluqchatbot', 'llm_provider') ?: 'openrouter';
+
+        if (empty($weaviate_url)) {
+            throw new \moodle_exception('llm_provider_not_configured', 'block_uteluqchatbot');
+        }
+
+        if (strpos($weaviate_url, 'https://') !== 0) {
+            $weaviate_url = 'https://' . $weaviate_url;
+        }
+
+        $embedder = self::build_embedder($provider_id);
+        $llm      = self::build_llm_provider($provider_id);
+
+        return new \block_uteluqchatbot\weaviate_connector($weaviate_url, $weaviate_key, $embedder, $llm);
+    }
+
+    /**
+     * Instantiate the embedder matching the selected provider.
+     *
+     * @param string $provider_id 'openrouter' | 'huggingface'
+     * @return \block_uteluqchatbot\providers\embedder_interface
+     * @throws \moodle_exception
+     */
+    public static function build_embedder(string $provider_id): \block_uteluqchatbot\providers\embedder_interface {
+        if ($provider_id === 'huggingface') {
+            $key   = get_config('block_uteluqchatbot', 'huggingface_api_key');
+            $model = get_config('block_uteluqchatbot', 'huggingface_embedding_model') ?: 'BAAI/bge-m3';
+            if (empty($key)) {
+                throw new \moodle_exception('embedding_not_configured', 'block_uteluqchatbot');
+            }
+            return new \block_uteluqchatbot\providers\huggingface_embedder($key, $model);
+        }
+
+        // Default: OpenRouter
+        $key   = get_config('block_uteluqchatbot', 'openrouter_api_key');
+        $model = get_config('block_uteluqchatbot', 'openrouter_embedding_model') ?: 'openai/text-embedding-3-small';
+        if (empty($key)) {
+            throw new \moodle_exception('embedding_not_configured', 'block_uteluqchatbot');
+        }
+        return new \block_uteluqchatbot\providers\openrouter_embedder($key, $model);
+    }
+
+    /**
+     * Instantiate the LLM provider for text generation.
+     *
+     * @param string $provider_id 'openrouter' | 'huggingface'
+     * @return \block_uteluqchatbot\providers\llm_provider_interface
+     * @throws \moodle_exception
+     */
+    public static function build_llm_provider(string $provider_id): \block_uteluqchatbot\providers\llm_provider_interface {
+        if ($provider_id === 'huggingface') {
+            $key   = get_config('block_uteluqchatbot', 'huggingface_api_key');
+            $model = get_config('block_uteluqchatbot', 'huggingface_model') ?: 'mistralai/Mistral-7B-Instruct-v0.3';
+            if (empty($key)) {
+                throw new \moodle_exception('llm_provider_not_configured', 'block_uteluqchatbot');
+            }
+            return new \block_uteluqchatbot\providers\huggingface_provider($key, $model);
+        }
+
+        // Default: OpenRouter
+        $key   = get_config('block_uteluqchatbot', 'openrouter_api_key');
+        $model = get_config('block_uteluqchatbot', 'openrouter_model') ?: 'openai/gpt-4o-mini';
+        if (empty($key)) {
+            throw new \moodle_exception('llm_provider_not_configured', 'block_uteluqchatbot');
+        }
+        return new \block_uteluqchatbot\providers\openrouter_provider($key, $model);
+    }
+
+    private static function sanitize_chatbot_input(string $input): string {
         $dangerous_tags = ['script', 'iframe', 'object', 'embed', 'style', 'form', 'input', 'applet', 'link', 'meta'];
         foreach ($dangerous_tags as $tag) {
             $input = preg_replace('/<\s*\/?\s*' . $tag . '[^>]*>/i', '', $input);
         }
-
         $input = preg_replace('/\s*on\w+\s*=\s*("([^"]*)"|\'([^\']*)\'|[^\s>]+)/i', '', $input);
         $input = preg_replace('/javascript\s*:/i', '', $input);
 
@@ -166,54 +227,38 @@ class send_question extends external_api
         }
 
         $input = mb_substr($input, 0, 100000, 'UTF-8');
-        $input = htmlspecialchars($input, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
         return $input;
     }
 
-    /**
-     * Save conversation to database
-     * 
-     * Stores the chatbot conversation (question and answer) in the database
-     * for history tracking, analytics, and user reference purposes.
-     * 
-     * @param int $userid The ID of the user who asked the question
-     * @param int $courseid The ID of the course where the conversation took place
-     * @param string $question The original question asked by the user
-     * @param string $answer The chatbot's response to the question
-     * @return bool True if conversation was saved successfully, false otherwise
-     * @throws dml_exception If database operation fails
-     */
-    private static function save_conversation($userid, $courseid, $question, $answer)
-    {
+    public static function save_conversation(int $userid, int $courseid, string $question, string $answer): void {
         global $DB;
 
         $max_conversations = 10;
 
-        $record = new \stdClass();
-        $record->userid = $userid;
-        $record->courseid = $courseid;
-        $record->question = $question;
-        $record->answer = is_string($answer) ? $answer : json_encode($answer);
+        $record              = new \stdClass();
+        $record->userid      = $userid;
+        $record->courseid    = $courseid;
+        $record->question    = $question;
+        $record->answer      = is_string($answer) ? $answer : json_encode($answer);
         $record->timecreated = time();
 
         try {
-            $count = $DB->count_records('block_uteluqchatbot_conversations', ['userid' => $userid, 'courseid' => $courseid]);
+            $count = $DB->count_records(
+                'block_uteluqchatbot_conversations',
+                ['userid' => $userid, 'courseid' => $courseid]
+            );
 
             if ($count >= $max_conversations) {
                 $oldest_ids = $DB->get_fieldset_sql(
                     "SELECT id FROM {block_uteluqchatbot_conversations}
-                     WHERE userid = :userid AND courseid = :courseid
-                     ORDER BY timecreated ASC",
+                      WHERE userid = :userid AND courseid = :courseid
+                   ORDER BY timecreated ASC",
                     ['userid' => $userid, 'courseid' => $courseid],
                     0,
                     $count - $max_conversations + 1
                 );
-
-                if ($oldest_ids) {
-                    foreach ($oldest_ids as $old_id) {
-                        $DB->delete_records('block_uteluqchatbot_conversations', ['id' => $old_id]);
-                    }
+                foreach ($oldest_ids as $old_id) {
+                    $DB->delete_records('block_uteluqchatbot_conversations', ['id' => $old_id]);
                 }
             }
 

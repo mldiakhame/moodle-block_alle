@@ -36,7 +36,7 @@
                         <div class="form-group">
                             <label for="file">{{#str}}text_or_pdf_files, block_uteluqchatbot{{/str}}</label>
                             <div class="file-upload-container">
-                                <input type="file" id="file" name="files[]" class="file-input" accept=".txt,.text,.md,.pdf" multiple required>
+                                <input type="file" id="file" name="files[]" class="file-input" accept=".txt,.text,.md,.pdf" multiple>
                                 <div class="file-upload-box">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="upload-icon">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -57,6 +57,20 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+
+    {{! ── Loading modal (shown during file indexing) ── }}
+    <div id="uploadLoadingModal" class="cb-loading-modal" style="display:none;" aria-modal="true" role="dialog" aria-labelledby="loadingModalTitle">
+        <div class="cb-loading-card">
+            <div class="cb-spinner" aria-hidden="true">
+                <svg viewBox="0 0 50 50">
+                    <circle cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
+                </svg>
+            </div>
+            <p id="loadingModalTitle" class="cb-loading-title">{{#str}}indexing_in_progress, block_uteluqchatbot{{/str}}</p>
+            <p class="cb-loading-sub">{{#str}}indexing_please_wait, block_uteluqchatbot{{/str}}</p>
+            <div class="cb-loading-files" id="loadingFileList"></div>
         </div>
     </div>
 </div>

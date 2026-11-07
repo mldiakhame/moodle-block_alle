@@ -50,7 +50,7 @@ $functions = [
 ];
 
 $services = [
-    'Chatbot Services' => [
+    'UGB Chatbot Services' => [
         'functions' => [
             'block_uteluqchatbot_send_question',
             'block_uteluqchatbot_save_prompt',

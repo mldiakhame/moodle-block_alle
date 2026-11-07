@@ -2,9 +2,37 @@
 /**
  * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
  */
-$string['pluginname'] = 'uteluqchatbot';
+$string['pluginname'] = 'UGB Chatbot';
 $string['uteluqchatbot:addinstance'] = 'Ajouter un nouveau bloc uteluqchatbot';
 $string['uteluqchatbot:myaddinstance'] = 'Ajouter un nouveau bloc uteluqchatbot au tableau de bord';
+
+// Paramètres du provider LLM
+$string['heading_llm'] = 'Fournisseur IA (génération)';
+$string['heading_llm_desc'] = 'Sélectionnez le fournisseur utilisé pour générer les réponses du chatbot. La clé HuggingFace est toujours requise pour les embeddings BGE-M3.';
+$string['llm_provider'] = 'Fournisseur de génération';
+$string['llm_provider_desc'] = 'Choisissez entre OpenRouter (accès à des centaines de modèles) ou HuggingFace (modèles open-source).';
+$string['provider_openrouter'] = 'OpenRouter';
+$string['provider_huggingface'] = 'HuggingFace';
+
+$string['heading_openrouter'] = 'Paramètres OpenRouter';
+$string['openrouter_api_key'] = 'Clé API OpenRouter';
+$string['openrouter_api_key_desc'] = 'Votre clé API OpenRouter. Requise si OpenRouter est le fournisseur sélectionné.';
+$string['openrouter_model'] = 'Modèle OpenRouter';
+$string['openrouter_model_desc'] = 'Identifiant du modèle tel qu\'affiché sur openrouter.ai, ex. openai/gpt-4o-mini, anthropic/claude-3-haiku, meta-llama/llama-3-8b-instruct.';
+
+$string['heading_huggingface'] = 'Paramètres HuggingFace';
+$string['heading_huggingface_desc'] = 'Cette clé API est également utilisée pour les embeddings BGE-M3 quel que soit le fournisseur de génération sélectionné.';
+$string['huggingface_api_key'] = 'Clé API HuggingFace';
+$string['huggingface_api_key_desc'] = 'Votre clé API HuggingFace (hf_...). Requise pour les embeddings BGE-M3 et pour la génération HuggingFace.';
+$string['huggingface_model'] = 'Modèle de génération HuggingFace';
+$string['huggingface_model_desc'] = 'ID du modèle sur HuggingFace Hub qui supporte le endpoint chat completions, ex. mistralai/Mistral-7B-Instruct-v0.3.';
+
+$string['heading_weaviate'] = 'Paramètres Weaviate';
+$string['heading_adobe'] = 'Paramètres Adobe PDF Services';
+
+$string['llm_provider_not_configured'] = 'Le fournisseur IA n\'est pas configuré. Veuillez vérifier les paramètres du plugin.';
+$string['embedding_not_configured'] = 'La clé API HuggingFace n\'est pas configurée. Elle est requise pour les embeddings BGE-M3.';
+$string['embedding_failed'] = 'Échec de la génération de l\'embedding pour la question. Veuillez réessayer.';
 $string['adobe_pdf_client_id'] = 'Identifiant Client Adobe PDF Services';
 $string['adobe_pdf_client_id_desc'] = 'Entrez votre identifiant client Adobe PDF Services ici.';
 $string['adobe_pdf_client_secret'] = 'Secret Client Adobe PDF Services';
@@ -70,7 +98,6 @@ $string['last_error'] = " tentatives. Dernière erreur : HTTP ";
 $string['invalid_response_format'] = 'Format de réponse invalide.';
 $string['http_code'] = 'Code HTTP : ';
 $string['back'] = 'Retour';
-$string['pluginname'] = "uteluqchatbot";
 $string['default_prompt'] = <<<EOT
 Contexte de la situation
 L’apprenant suit un cours sur [[ coursename ]]. Ton rôle est de l’accompagner en lui fournissant des réponses précises, pertinentes et adaptées à son apprentissage.
@@ -216,3 +243,25 @@ $string['response_type_debug'] = 'Type de réponse :';
 $string['upload_error_details_debug'] = 'Détails de l\'erreur de téléchargement :';
 $string['error_object_debug'] = 'Objet d\'erreur :';
 $string['raw_server_response_debug'] = 'Réponse brute du serveur :';
+// Nouvelles chaînes pour l'interface redesignée
+$string['online'] = 'En ligne';
+$string['chat_history'] = 'Historique de conversation';
+$string['send'] = 'Envoyer le message';
+
+// Paramètres du modèle d'embedding par provider
+$string['openrouter_embedding_model'] = 'Modèle d\'embedding OpenRouter';
+$string['openrouter_embedding_model_desc'] = 'Modèle d\'embedding sur OpenRouter, ex. openai/text-embedding-3-small. Utilisé pour vectoriser les documents et les questions.';
+$string['huggingface_embedding_model'] = 'Modèle d\'embedding HuggingFace';
+$string['huggingface_embedding_model_desc'] = 'Modèle d\'embedding sur HuggingFace Inference API, ex. BAAI/bge-m3 (multilingue, recommandé).';
+
+// Chaînes du modal de chargement
+$string['indexing_in_progress'] = 'Indexation du contenu du cours en cours...';
+$string['indexing_please_wait'] = 'Cela peut prendre quelques minutes selon le nombre de fichiers. Veuillez ne pas fermer cette fenêtre.';
+
+// Mode RAG agentique
+$string['heading_rag_mode']      = 'Mode RAG';
+$string['heading_rag_mode_desc'] = 'Choisissez entre le RAG standard (un seul passage de récupération) et le RAG agentique (pipeline itératif avec reclassement, reformulation de la requête et citations des sources).';
+$string['rag_mode']              = 'Mode RAG';
+$string['rag_mode_desc']         = 'Normal : récupération → génération. Agentique : récupération → vérification qualité → reformulation si nécessaire → reclassement → génération avec citations.';
+$string['rag_mode_normal']       = 'RAG Normal (standard)';
+$string['rag_mode_agentic']      = 'RAG Agentique (reclassement + reformulation + citations)';

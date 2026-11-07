@@ -2,7 +2,7 @@
 /**
  * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
  */
-$string['pluginname'] = 'uteluqchatbot';
+$string['pluginname'] = 'UGB Chatbot';
 $string['uteluqchatbot:addinstance'] = 'Füge einen neuen Chatbot-Block hinzu';
 $string['uteluqchatbot:myaddinstance'] = 'Füge einen neuen Chatbot-Block zum Dashboard hinzu';
 $string['weaviate_cohere_not_configured'] = 'Der Cohere-API-Schlüssel ist entweder nicht konfiguriert oder ungültig. Bitte überprüfen Sie die Einstellungen.';
@@ -213,3 +213,34 @@ $string['privacy:metadata:adobe_pdf_api'] = 'Daten, die an die Adobe PDF Service
 $string['privacy:metadata:adobe_pdf_api:pdf_content'] = 'PDF-Dateiinhalt, der zur Textextraktion an Adobe PDF Services gesendet wird';
 $string['privacy:metadata:adobe_pdf_api:filename'] = 'Ursprünglicher Dateiname des zur Verarbeitung gesendeten PDF-Dokuments';
 $string['privacy:metadata:adobe_pdf_api:extracted_text'] = 'Textinhalt, der von Adobe PDF Services aus PDF-Dokumenten extrahiert wurde';
+
+
+// LLM provider settings (new in 2025 — translated from English)
+$string['heading_llm'] = 'AI Generation Provider';
+$string['heading_llm_desc'] = 'Select the provider used to generate chatbot responses. The HuggingFace API key is always required for BGE-M3 embeddings.';
+$string['llm_provider'] = 'Generation provider';
+$string['llm_provider_desc'] = 'Choose between OpenRouter (access to hundreds of models) or HuggingFace (open-source models).';
+$string['provider_openrouter'] = 'OpenRouter';
+$string['provider_huggingface'] = 'HuggingFace';
+$string['heading_openrouter'] = 'OpenRouter settings';
+$string['openrouter_api_key'] = 'OpenRouter API Key';
+$string['openrouter_api_key_desc'] = 'Your OpenRouter API key.';
+$string['openrouter_model'] = 'OpenRouter model';
+$string['openrouter_model_desc'] = 'Model identifier on openrouter.ai, e.g. openai/gpt-4o-mini.';
+$string['heading_huggingface'] = 'HuggingFace settings';
+$string['heading_huggingface_desc'] = 'This API key is also used for BGE-M3 embeddings.';
+$string['huggingface_api_key'] = 'HuggingFace API Key';
+$string['huggingface_api_key_desc'] = 'Your HuggingFace API key (hf_...).';
+$string['huggingface_model'] = 'HuggingFace generation model';
+$string['huggingface_model_desc'] = 'Chat-capable model ID on HuggingFace Hub.';
+$string['heading_weaviate'] = 'Weaviate settings';
+$string['heading_adobe'] = 'Adobe PDF Services settings';
+$string['llm_provider_not_configured'] = 'The AI generation provider is not configured. Please check the plugin settings.';
+$string['embedding_not_configured'] = 'The HuggingFace API key is not configured. It is required for BGE-M3 embeddings.';
+$string['embedding_failed'] = 'Failed to generate embedding for the question. Please try again.';
+
+// Embedding model settings
+$string['openrouter_embedding_model'] = 'OpenRouter embedding model';
+$string['openrouter_embedding_model_desc'] = 'Embedding model on OpenRouter, e.g. openai/text-embedding-3-small.';
+$string['huggingface_embedding_model'] = 'HuggingFace embedding model';
+$string['huggingface_embedding_model_desc'] = 'Embedding model on HuggingFace Inference API, e.g. BAAI/bge-m3.';

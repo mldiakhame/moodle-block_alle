@@ -60,13 +60,14 @@ class block_uteluqchatbot extends block_base
 
         // Prepare data for templates
         $templateData = [
-            'has_prompt' => !empty($existing_prompt),
-            'prompt_text' => $existing_prompt ? $existing_prompt->prompt : $default_prompt,
-            'isteacher' => $isteacher,
-            'wwwroot' => $CFG->wwwroot,
-            'userid' => $USER->id,
-            'courseid' => $COURSE->id,
-            'sesskey' => sesskey()
+            'has_prompt'   => !empty($existing_prompt),
+            'prompt_text'  => $existing_prompt ? $existing_prompt->prompt : $default_prompt,
+            'isteacher'    => $isteacher,
+            'wwwroot'      => $CFG->wwwroot,
+            'userid'       => $USER->id,
+            'courseid'     => $COURSE->id,
+            'sesskey'      => sesskey(),
+            'coursename'   => $coursename,
         ];
 
         // Load templates
@@ -80,13 +81,9 @@ class block_uteluqchatbot extends block_base
             $USER->id,
             $COURSE->id
         ]);
-        $PAGE->requires->js_call_amd('block_uteluqchatbot/fileupload', 'init');
 
         // Path to the CSS file within the plugin directory
-        $cssFile = 'block_uteluqchatbot/styles.css';
-
-        // Add the CSS file to the page using Moodle's API
-        $PAGE->requires->css(new moodle_url('/blocks/uteluqchatbot/' . $cssFile));
+        $PAGE->requires->css(new moodle_url('/blocks/uteluqchatbot/styles.css'));
 
         $this->content->footer = '';
 

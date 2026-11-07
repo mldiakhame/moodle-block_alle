@@ -30,10 +30,10 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'block_uteluqchatbot';
 
 // Human-readable version - Recommended format: major.minor.patch.
-$plugin->release = '0.5.9';
+$plugin->release = '0.6.0';
 
 // Internal version number - Format YYYYMMDDXX (year, month, day, increment).
-$plugin->version = 2025063001;
+$plugin->version = 2026051301;
 
 // Minimum required version of Moodle (here Moodle 4.1 - November 2022).
 // This corresponds to Moodle 4.1.

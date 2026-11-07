@@ -2,9 +2,38 @@
 /**
  * @copyright 2025 Université TÉLUQ and the UNIVERSITÉ GASTON BERGER DE SAINT-LOUIS
  */
-$string['pluginname'] = 'uteluqchatbot';
+$string['pluginname'] = 'UGB Chatbot';
 $string['uteluqchatbot:addinstance'] = 'Add a new chatbot block';
 $string['uteluqchatbot:myaddinstance'] = 'Add a new chatbot block to Dashboard';
+
+// LLM provider settings
+$string['heading_llm'] = 'AI Generation Provider';
+$string['heading_llm_desc'] = 'Select the provider used to generate chatbot responses. The HuggingFace API key is always required for BGE-M3 embeddings.';
+$string['llm_provider'] = 'Generation provider';
+$string['llm_provider_desc'] = 'Choose between OpenRouter (access to hundreds of models) or HuggingFace (open-source models).';
+$string['provider_openrouter'] = 'OpenRouter';
+$string['provider_huggingface'] = 'HuggingFace';
+
+$string['heading_openrouter'] = 'OpenRouter settings';
+$string['openrouter_api_key'] = 'OpenRouter API Key';
+$string['openrouter_api_key_desc'] = 'Your OpenRouter API key. Required when OpenRouter is the selected provider.';
+$string['openrouter_model'] = 'OpenRouter model';
+$string['openrouter_model_desc'] = 'Model identifier as shown on openrouter.ai, e.g. openai/gpt-4o-mini, anthropic/claude-3-haiku, meta-llama/llama-3-8b-instruct.';
+
+$string['heading_huggingface'] = 'HuggingFace settings';
+$string['heading_huggingface_desc'] = 'This API key is also used for BGE-M3 embeddings regardless of the selected generation provider.';
+$string['huggingface_api_key'] = 'HuggingFace API Key';
+$string['huggingface_api_key_desc'] = 'Your HuggingFace API key (hf_...). Required for BGE-M3 embeddings and for HuggingFace generation.';
+$string['huggingface_model'] = 'HuggingFace generation model';
+$string['huggingface_model_desc'] = 'Model ID on HuggingFace Hub that supports the chat completions endpoint, e.g. mistralai/Mistral-7B-Instruct-v0.3.';
+
+$string['heading_weaviate'] = 'Weaviate settings';
+$string['heading_adobe'] = 'Adobe PDF Services settings';
+
+// Provider errors
+$string['llm_provider_not_configured'] = 'The AI generation provider is not configured. Please check the plugin settings.';
+$string['embedding_not_configured'] = 'The HuggingFace API key is not configured. It is required for BGE-M3 embeddings.';
+$string['embedding_failed'] = 'Failed to generate embedding for the question. Please try again.';
 $string['adobe_pdf_client_id'] = 'Adobe PDF Services Client ID';
 $string['adobe_pdf_client_id_desc'] = 'Enter your Adobe PDF Services Client ID here.';
 $string['adobe_pdf_client_secret'] = 'Adobe PDF Services Client Secret';
@@ -13,9 +42,9 @@ $string['weaviate_api_url'] = 'Weaviate API URL';
 $string['weaviate_api_url_desc'] = 'Enter the URL for the Weaviate API here.';
 $string['weaviate_api_key'] = 'Weaviate API Key';
 $string['weaviate_api_key_desc'] = 'Enter your Weaviate API key here.';
-$string['weaviate_cohere_not_configured'] = 'Cohere API key is either not configured or invalid. Please check the settings.';
-$string['cohere_embedding_api_key'] = 'Cohere Embedding Model API Key';
-$string['cohere_embedding_api_key_desc'] = 'Enter your API key for the Cohere Embedding Model here.';
+$string['weaviate_cohere_not_configured'] = 'The AI provider or embedding API key is not configured. Please check the plugin settings.';
+$string['cohere_embedding_api_key'] = 'Cohere Embedding Model API Key (deprecated)';
+$string['cohere_embedding_api_key_desc'] = 'Deprecated — use the HuggingFace API key instead.';
 $string['test_api_keys'] = 'Test API Keys';
 $string['test_api_keys_desc'] = 'Click to test the configured API keys';
 $string['test_api_keys_label'] = 'Test Keys';
@@ -94,7 +123,6 @@ $string['failure_after_retries'] = "Failure after ";
 $string['last_error'] = " attempts. Last error: HTTP ";
 $string['invalid_response_format'] = 'Invalid response format.';
 $string['http_code'] = 'HTTP Code: ';
-$string['pluginname'] = "uteluqchatbot";
 $string['default_prompt'] = <<<EOT
 Situation Context
 The learner is taking a course on [[ coursename ]]. Your role is to support them by providing accurate, relevant, and helpful answers adapted to their learning.
@@ -192,7 +220,6 @@ $string['privacy:metadata:adobe_pdf_api'] = 'Data sent to Adobe PDF Services API
 $string['privacy:metadata:adobe_pdf_api:pdf_content'] = 'PDF file content sent to Adobe PDF Services for text extraction';
 $string['privacy:metadata:adobe_pdf_api:filename'] = 'Original filename of the PDF document sent for processing';
 $string['privacy:metadata:adobe_pdf_api:extracted_text'] = 'Text content extracted from PDF documents by Adobe PDF Services';
-$string['pluginname'] = 'TÉLUQ Chatbot';
 $string['conversations'] = 'Conversations';
 $string['prompts'] = 'Custom Prompts';
 $string['no_files_selected'] = 'No files selected';
@@ -241,3 +268,33 @@ $string['response_type_debug'] = 'Response type:';
 $string['upload_error_details_debug'] = 'Upload error details:';
 $string['error_object_debug'] = 'Error object:';
 $string['raw_server_response_debug'] = 'Raw server response:';
+// New strings for redesigned UI
+$string['online'] = 'Online';
+$string['chat_history'] = 'Chat history';
+$string['send'] = 'Send message';
+
+// Privacy metadata — new providers
+$string['privacy:metadata:llm_api'] = 'Data sent to the configured LLM provider (OpenRouter or HuggingFace) for AI response generation';
+$string['privacy:metadata:llm_api:question'] = 'The user question sent to the LLM API for processing';
+$string['privacy:metadata:llm_api:courseid'] = 'The course context information sent to the LLM API';
+$string['privacy:metadata:llm_api:prompt'] = 'Custom prompts and system instructions sent to the LLM API';
+$string['privacy:metadata:huggingface_api'] = 'Data sent to HuggingFace Inference API for BGE-M3 embedding generation';
+$string['privacy:metadata:huggingface_api:question'] = 'The user question text sent to HuggingFace for vector embedding';
+
+// Embedding model settings per provider
+$string['openrouter_embedding_model'] = 'OpenRouter embedding model';
+$string['openrouter_embedding_model_desc'] = 'Embedding model on OpenRouter, e.g. openai/text-embedding-3-small. Used to vectorize documents and questions.';
+$string['huggingface_embedding_model'] = 'HuggingFace embedding model';
+$string['huggingface_embedding_model_desc'] = 'Embedding model on HuggingFace Inference API, e.g. BAAI/bge-m3 (multilingual, recommended).';
+
+// Loading modal strings
+$string['indexing_in_progress'] = 'Indexing your course content...';
+$string['indexing_please_wait'] = 'This may take a few minutes depending on the number of files. Please do not close this window.';
+
+// Agentic RAG mode
+$string['heading_rag_mode']      = 'RAG Mode';
+$string['heading_rag_mode_desc'] = 'Choose between standard RAG (single retrieval pass) and Agentic RAG (iterative pipeline with reranking, query rewriting and source citations).';
+$string['rag_mode']              = 'RAG mode';
+$string['rag_mode_desc']         = 'Normal: simple retrieval → generation. Agentic: retrieval → quality check → optional query rewrite → reranking → generation with citations.';
+$string['rag_mode_normal']       = 'Normal RAG (standard)';
+$string['rag_mode_agentic']      = 'Agentic RAG (reranking + query rewriting + citations)';
