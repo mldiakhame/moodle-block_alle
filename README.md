@@ -67,7 +67,8 @@ The assistant remembers the last ten exchanges of each learner in each course.
 ## Installation
 
 1. Copy the plugin to `blocks/alle` in your Moodle code (`public/blocks/alle`
-   from Moodle 5.1), or install it from the Moodle plugins directory.
+   from Moodle 5.1), or install it from the
+   [Moodle plugins directory](https://moodle.org/plugins/block_alle).
 2. Visit **Site administration > Notifications** to complete the installation.
 3. Fill in the settings under **Site administration > Plugins > Blocks > ALL-E**,
    then use **Check the services** to confirm that every service answers.
